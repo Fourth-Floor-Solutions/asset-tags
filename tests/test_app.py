@@ -323,3 +323,16 @@ def test_accent_ink():
     assert ink_for("#f6f06b") == "#16181c"      # dark text on yellow
     assert ink_for("#1f3a8a") == "#ffffff"      # white text on navy
     assert ink_for("nonsense") == "#16181c"
+
+
+def test_legacy_database_name_is_renamed(tmp_path, monkeypatch):
+    import sqlite3
+    from app import db
+    old = tmp_path / "asset-tags.db"
+    sqlite3.connect(old).execute("CREATE TABLE t(x)").connection.commit()
+    monkeypatch.setattr(db, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(db, "DB_PATH", str(tmp_path / "tagdesk.db"))
+    monkeypatch.setattr(db, "LEGACY_DB_PATH", str(old))
+    conn = db.connect()
+    assert conn.execute("SELECT name FROM sqlite_master WHERE name = 't'").fetchone()
+    assert (tmp_path / "tagdesk.db").exists() and not old.exists()

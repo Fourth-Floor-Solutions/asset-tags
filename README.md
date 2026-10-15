@@ -1,4 +1,6 @@
-# Asset Tags
+# TagDesk
+
+**Asset tag printing for MSPs.**
 
 Issue, print and look up asset tags for the equipment you manage. Each tag
 carries your client's name, a short permanent code (like `7KQ3M`) and a QR
@@ -37,8 +39,8 @@ works just as well for a single organisation tagging its own equipment.
 ## Quick start
 
 ```sh
-git clone https://github.com/Fourth-Floor-Solutions/asset-tags.git
-cd asset-tags
+git clone https://github.com/Fourth-Floor-Solutions/tagdesk.git
+cd tagdesk
 cp .env.example .env          # then edit it: see Configuration below
 mkdir -p data && sudo chown 1000:1000 data
 docker compose up -d --build
@@ -179,8 +181,8 @@ linked Hudu asset* in Settings. The asset layouts need a text field for it
 (default name *Asset Tag*). This script adds one, dry run first:
 
 ```sh
-docker exec asset-tags python -m scripts.add_asset_tag_field <layout id> [<layout id> …]
-docker exec asset-tags python -m scripts.add_asset_tag_field <layout id> … --apply
+docker exec tagdesk python -m scripts.add_asset_tag_field <layout id> [<layout id> …]
+docker exec tagdesk python -m scripts.add_asset_tag_field <layout id> … --apply
 ```
 
 It backs each layout up to `data/hudu-backups/` first and checks that every
@@ -207,7 +209,7 @@ Register an app in Microsoft Entra ID:
 With the Azure CLI:
 
 ```sh
-APP=$(az ad app create --display-name "Asset Tags" --sign-in-audience AzureADMyOrg \
+APP=$(az ad app create --display-name "TagDesk" --sign-in-audience AzureADMyOrg \
   --web-redirect-uris "https://assets.example.com/auth/callback" \
   --enable-id-token-issuance true --query appId -o tsv)
 az ad sp create --id "$APP"
@@ -245,12 +247,12 @@ anything you wouldn't print on the label itself out of the device name.
 
 ## Data and backups
 
-Everything is in one SQLite file, `data/asset-tags.db`: tags, clients, users,
+Everything is in one SQLite file, `data/tagdesk.db`: tags, clients, users,
 printers, settings and history. Back up the `data/` directory. For a
 consistent copy while running:
 
 ```sh
-docker exec asset-tags python -c "import sqlite3; s=sqlite3.connect('/data/asset-tags.db'); s.backup(sqlite3.connect('/data/backup.db'))"
+docker exec tagdesk python -c "import sqlite3; s=sqlite3.connect('/data/tagdesk.db'); s.backup(sqlite3.connect('/data/backup.db'))"
 ```
 
 To update, pull the new code and run `docker compose up -d --build`. The
@@ -271,7 +273,7 @@ bitmaps), `printer.py` (Brother raster and SNMP), `usage.py` (tape tracking),
 
 ## Licence
 
-Asset Tags is free software, licensed under the
+TagDesk is free software, licensed under the
 [GNU Affero General Public License v3.0](LICENSE). Copyright © 2026 Fourth
 Floor Solutions Ltd.
 

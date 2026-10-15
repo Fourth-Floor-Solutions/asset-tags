@@ -1,11 +1,11 @@
-# Asset Tags. An explicit project name stops this stack clashing with others
+# TagDesk. An explicit project name stops this stack clashing with others
 # whose compose file sits in a folder of the same name.
-name: asset-tags
+name: tagdesk
 services:
   app:
     build: .
-    image: asset-tags:latest
-    container_name: asset-tags
+    image: tagdesk:latest
+    container_name: tagdesk
     restart: unless-stopped
     env_file: .env
     user: "1000:1000"

@@ -15,8 +15,8 @@ from datetime import datetime
 
 from app import hudu
 
-HINT = "Asset tag code. Set by the Asset Tags app ({url}); don't edit by hand.".format(
-    url=os.environ.get("PUBLIC_BASE_URL", "").replace("https://", "").replace("http://", "") or "asset tags")
+HINT = "Asset tag code. Set by TagDesk ({url}); don't edit by hand.".format(
+    url=os.environ.get("PUBLIC_BASE_URL", "").replace("https://", "").replace("http://", "") or "TagDesk")
 
 
 def layout(lid):

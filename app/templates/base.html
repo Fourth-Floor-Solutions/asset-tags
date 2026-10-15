@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}Asset Tags{% endblock %} · {{ org.org_short }}</title>
+<title>{% block title %}TagDesk{% endblock %} · {{ org.org_short }}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;800&display=swap">
 <link rel="icon" href="{{ favicon }}" type="image/svg+xml">
@@ -16,7 +16,7 @@
 {% if user %}
 <header class="top">
   <div class="top-in">
-    <a class="brand" href="/"><span class="brand-mark">{{ org.org_mark }}</span> Asset Tags</a>
+    <a class="brand" href="/"><span class="brand-mark">{{ org.org_mark }}</span> TagDesk</a>
     {% set path = request.url.path %}
     <nav class="nav">
       <a href="/" class="{{ 'on' if path == '/' }}">Tags</a>
@@ -35,6 +35,6 @@
   {% if flash %}<div class="flash {{ flash.kind }}" role="status">{{ flash.text }}</div>{% endif %}
   {% block main %}{% endblock %}
 </main>
-<footer class="foot"><a href="{{ source_url }}" rel="noopener">Asset Tags</a> · free software under the AGPL-3.0 · <a href="{{ source_url }}" rel="noopener">source code</a></footer>
+<footer class="foot"><a href="{{ source_url }}" rel="noopener">TagDesk</a> · free software under the AGPL-3.0 · <a href="{{ source_url }}" rel="noopener">source code</a></footer>
 </body>
 </html>

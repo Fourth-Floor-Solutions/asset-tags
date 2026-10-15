@@ -2,7 +2,7 @@ import os
 import sys
 import tempfile
 
-os.environ["DATA_DIR"] = tempfile.mkdtemp(prefix="asset-tags-test-")
+os.environ["DATA_DIR"] = tempfile.mkdtemp(prefix="tagdesk-test-")
 os.environ["ADMIN_PASSWORD"] = "test-password-123"
 os.environ["PUBLIC_BASE_URL"] = "http://testserver"
 os.environ.pop("HUDU_URL", None)

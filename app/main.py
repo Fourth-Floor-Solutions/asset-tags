@@ -1,4 +1,4 @@
-"""Asset Tags: issue, print and look up client-branded asset tags."""
+"""TagDesk: issue, print and look up client-branded asset tags."""
 from __future__ import annotations
 
 import os
@@ -20,7 +20,7 @@ HERE = os.path.dirname(__file__)
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:8080").rstrip("/")
 # AGPL: people using the app over a network must be able to get its source.
 # If you run a modified version, point this at your own copy of the code.
-SOURCE_URL = os.environ.get("SOURCE_URL", "https://github.com/Fourth-Floor-Solutions/asset-tags")
+SOURCE_URL = os.environ.get("SOURCE_URL", "https://github.com/Fourth-Floor-Solutions/tagdesk")
 MAX_BATCH = 100
 MAX_PRINT = 200
 
@@ -42,7 +42,7 @@ db.init()
 auth.seed_admin()
 labels.apply_overrides(settings.formats())
 
-app = FastAPI(title="Asset Tags", docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title="TagDesk", docs_url=None, redoc_url=None, openapi_url=None)
 app.mount("/static", StaticFiles(directory=os.path.join(HERE, "static")), name="static")
 templates = Jinja2Templates(directory=os.path.join(HERE, "templates"))
 
@@ -84,7 +84,7 @@ async def load_user(request: Request, call_next):
 app.add_middleware(
     SessionMiddleware,
     secret_key=_session_secret(),
-    session_cookie="ff_assettags",
+    session_cookie="tagdesk_session",
     max_age=60 * 60 * 12,
     same_site="lax",
     https_only=PUBLIC_BASE_URL.startswith("https") and os.environ.get("COOKIE_INSECURE") != "1",
@@ -247,7 +247,7 @@ def favicon_svg():
     from starlette.responses import Response
 
     org = settings.get_all()
-    mark = escape((org["org_mark"] or "AT")[:3])
+    mark = escape((org["org_mark"] or "TD")[:3])
     size = 15 if len(mark) <= 2 else 11
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" '
            f'fill="{escape(org["accent"])}"/><text x="16" y="22" text-anchor="middle" font-family="Menlo, monospace" '

@@ -18,7 +18,7 @@ from . import db
 DEFAULTS = {
     "org_name": "Your organisation",
     "org_short": "Your organisation",
-    "org_mark": "AT",
+    "org_mark": "TD",
     "accent": "#5b8def",
     "support_phone": "",
     "support_email": "",

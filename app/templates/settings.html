@@ -2,7 +2,7 @@
 {% block title %}{{ 'Set up' if setup else 'Settings' }}{% endblock %}
 {% block main %}
 <div class="head"><div>
-  <h1>{{ 'Set up Asset Tags' if setup else 'Settings' }}</h1>
+  <h1>{{ 'Set up TagDesk' if setup else 'Settings' }}</h1>
   <p class="muted">{% if setup %}Tell the app who you are. This goes on every label and on the page people see when they scan a tag. You can change all of it later under Settings.{% else %}How the app presents your organisation, and how it connects to Hudu and Microsoft sign-in.{% endif %}</p>
 </div></div>
 {% if error %}<div class="flash bad">{{ error }}</div>{% endif %}

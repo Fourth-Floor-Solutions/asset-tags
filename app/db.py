@@ -10,7 +10,8 @@ from typing import Optional
 from . import codes
 
 DATA_DIR = os.environ.get("DATA_DIR", os.path.join(os.path.dirname(__file__), "..", "data"))
-DB_PATH = os.path.join(DATA_DIR, "asset-tags.db")
+DB_PATH = os.path.join(DATA_DIR, "tagdesk.db")
+LEGACY_DB_PATH = os.path.join(DATA_DIR, "asset-tags.db")   # name used before the app became TagDesk
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -94,6 +95,10 @@ def now() -> str:
 
 def connect() -> sqlite3.Connection:
     os.makedirs(DATA_DIR, exist_ok=True)
+    if not os.path.exists(DB_PATH) and os.path.exists(LEGACY_DB_PATH):
+        for suffix in ("", "-wal", "-shm"):
+            if os.path.exists(LEGACY_DB_PATH + suffix):
+                os.rename(LEGACY_DB_PATH + suffix, DB_PATH + suffix)
     conn = sqlite3.connect(DB_PATH, timeout=10, isolation_level=None)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
