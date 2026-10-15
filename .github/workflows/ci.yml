@@ -27,15 +27,28 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install -q -r requirements-dev.txt
+      - name: Tests with coverage
+        run: python -m pytest --cov=app --cov=scripts --cov-report=term-missing:skip-covered --cov-fail-under=80
+
+  image:
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Build the image
         run: docker build -t tagdesk:ci --build-arg GIT_COMMIT=$(git rev-parse --short HEAD) .
-      - name: Tests
-        run: >
-          docker run --rm --user root -v "$PWD/tests:/srv/tests:ro" -e DATA_DIR=/tmp/data tagdesk:ci
-          sh -c "pip install -q pytest && cd /srv && python -m pytest -q -p no:cacheprovider tests"
+      - name: Starts and answers its health check
+        run: |
+          docker run -d --name tagdesk-ci -e ADMIN_PASSWORD=ci-only-password -p 8080:8080 tagdesk:ci
+          for i in $(seq 1 30); do curl -fs localhost:8080/healthz && exit 0; sleep 1; done
+          docker logs tagdesk-ci; exit 1
       - name: Dependency audit
         run: >
           docker run --rm --user root tagdesk:ci

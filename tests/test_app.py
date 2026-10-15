@@ -139,10 +139,9 @@ def test_hudu_sync(monkeypatch):
     assert "cleared" in c.get(f"/tags/{code}").text
 
 
-def test_login_by_email():
-    from app import db, main
+def test_login_by_email(conn):
+    from app import main
 
-    conn = db.connect()
     conn.execute("UPDATE users SET email = 'admin@example.test' WHERE username = 'admin'")
     conn.close()
     main._login_fails.clear()
@@ -212,6 +211,7 @@ def test_print_buttons(monkeypatch):
     login(c)
     monkeypatch.setattr(printer, "status", lambda host: (_ for _ in ()).throw(printer.PrinterError("offline")))
     c.post("/printers/new", data={"name": "Office", "address": "127.0.0.1"})
+    c.post("/tags/new", data={"client_id": internal_client_id(c), "format": "standard", "device_name": "D"})
     page = c.get("/").text
     assert 'id="print-selected"' in page and 'name="pick"' in page
     code = __import__("re").search(r'href="/tags/([0-9A-Z]{5})"', page).group(1)
@@ -310,7 +310,7 @@ def test_strip_job():
     assert len(many) == 2 and all(s.width <= printer.MAX_PAGE_DOTS for s in many)
 
 
-def test_cassette_usage(monkeypatch):
+def test_cassette_usage(monkeypatch, conn):
     from app import db, printer, usage
 
     raw = bytes.fromhex(
@@ -318,7 +318,6 @@ def test_cassette_usage(monkeypatch):
     )
     monkeypatch.setattr(printer, "_snmp_get", lambda host, oid: raw)
     assert printer.counter_cm("x") == 251
-    conn = db.connect()
     conn.execute("INSERT INTO printers(name, host, created_at) VALUES('U','10.9.9.9',?)", (db.now(),))
     p = conn.execute("SELECT * FROM printers WHERE host='10.9.9.9'").fetchone()
     st = {"tape_mm": 18, "tape_colour": "yellow", "errors": []}
@@ -335,10 +334,9 @@ def test_cassette_usage(monkeypatch):
     assert s18["labels_batch"] == int(770 // 5.0)
 
 
-def test_setup_and_settings():
-    from app import db, main, settings
+def test_setup_and_settings(conn):
+    from app import main, settings
 
-    conn = db.connect()
     conn.execute("DELETE FROM settings WHERE key = 'setup_done'")
     conn.close()
     main._login_fails.clear()
@@ -436,14 +434,20 @@ def test_legacy_database_name_is_renamed(tmp_path, monkeypatch):
 
     from app import db
 
+    tmp_path = tmp_path / "legacy"  # its own folder: the fixture already made tagdesk.db in tmp_path
+    tmp_path.mkdir()
     old = tmp_path / "asset-tags.db"
-    sqlite3.connect(old).execute("CREATE TABLE t(x)").connection.commit()
+    setup = sqlite3.connect(old)
+    setup.execute("CREATE TABLE t(x)")
+    setup.commit()
+    setup.close()
     monkeypatch.setattr(db, "DATA_DIR", str(tmp_path))
     monkeypatch.setattr(db, "DB_PATH", str(tmp_path / "tagdesk.db"))
     monkeypatch.setattr(db, "LEGACY_DB_PATH", str(old))
     conn = db.connect()
     assert conn.execute("SELECT name FROM sqlite_master WHERE name = 't'").fetchone()
     assert (tmp_path / "tagdesk.db").exists() and not old.exists()
+    conn.close()
 
 
 def test_saved_accent_overrides_stylesheet_default():
@@ -471,12 +475,14 @@ def test_version_in_footer_and_endpoint(monkeypatch):
     assert version._commit() == ""
 
 
-def test_batch_cut_choice_carries_to_print_page():
-    from app import main
+def test_batch_cut_choice_carries_to_print_page(monkeypatch):
+    from app import main, printer
 
     main._login_fails.clear()
     c = TestClient(app)
     login(c)
+    monkeypatch.setattr(printer, "status", lambda host: (_ for _ in ()).throw(printer.PrinterError("offline")))
+    c.post("/printers/new", data={"name": "Office", "address": "127.0.0.1"})  # the cut choice needs a printer
     assert 'name="cut"' in c.get("/tags/batch").text
     cid = internal_client_id(c)
     r = c.post(
