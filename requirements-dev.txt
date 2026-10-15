@@ -1,5 +1,5 @@
-# Development tools on top of the app's own requirements.
--r requirements.txt
+# Development tools. Install with the app's own requirements:
+#   uv pip install -r requirements.txt -r requirements-dev.txt
 pytest==9.*
 pytest-cov==7.*
 ruff==0.14.*

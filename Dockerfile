@@ -2,7 +2,8 @@ FROM python:3.14-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DATA_DIR=/data
 WORKDIR /srv
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# requirements.txt pins every package to an exact version and hash (generated from requirements.in).
+RUN pip install --no-cache-dir --require-hashes -r requirements.txt
 COPY app ./app
 COPY CHANGELOG.md ./
 # Optional: the git commit this image was built from, shown in the footer.

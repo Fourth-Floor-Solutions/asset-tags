@@ -23,6 +23,7 @@ First public release, under the AGPL-3.0.
 - Version number and build in the footer, and at `/version`.
 - Screenshots and drawn examples of tags on kit in the README, with QR codes you can scan ([#8](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/8)).
 - Set the Hudu API key, Microsoft sign-in (tenant, client ID, client secret and its expiry) and the source-code link in Settings, with **Test** buttons, changes applied without a restart, a warning before the client secret expires, and a log of setting changes. Values in `.env` still work and take priority ([#7](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/7)).
+- [CONTRIBUTING.md](https://github.com/Fourth-Floor-Solutions/tagdesk/blob/main/CONTRIBUTING.md) and [architecture notes](https://github.com/Fourth-Floor-Solutions/tagdesk/blob/main/docs/ARCHITECTURE.md) for contributors ([#10](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/10)).
 - An application log (`docker compose logs`): sign-ins, tag events, settings changes, and printer, Hudu and Microsoft sign-in failures. Passwords and secrets are never logged. Set the level with `LOG_LEVEL` ([#10](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/10)).
 - This changelog, grouped by date, and a What's new page linked from the footer ([#13](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/13)).
 
@@ -37,6 +38,7 @@ First public release, under the AGPL-3.0.
 - Code quality: Ruff linting and formatting, each test runs against its own database, coverage raised to over 80% and checked in CI, local development uses Python 3.14 like the Docker image, and the app's routes are split into one module per area with a shared database helper and settings read once per request ([#10](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/10)).
 - On phones, the top navigation folds behind a **Menu** button, and pages use the full width.
 - Better contrast: form field borders, and the green and amber status colours in light mode, now meet WCAG AA; keyboard focus is visible on the dark header ([#10](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/10)).
+- The Docker image installs exact, hash-checked versions of every dependency, from a lock file generated from `requirements.in` ([#10](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/10)).
 - Updated to Python 3.14, FastAPI 0.143, Starlette 1.8, uvicorn 0.54, Authlib 1.8, Pillow 12.3 and httpx 0.28.
 
 ### Fixed
