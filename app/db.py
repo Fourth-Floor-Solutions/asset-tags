@@ -168,6 +168,9 @@ def init() -> None:
             # From the archive check: '' (fine), 'archived', 'missing' or 'unarchived'.
             "hudu_state": "TEXT NOT NULL DEFAULT ''",
             "hudu_state_at": "TEXT",
+            # Someone said the label needs replacing: 'damaged', 'missing', 'faded' or 'other'.
+            "label_problem": "TEXT NOT NULL DEFAULT ''",
+            "label_problem_note": "TEXT NOT NULL DEFAULT ''",
         },
     )
     _migrate_printer(conn)

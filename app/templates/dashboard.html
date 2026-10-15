@@ -10,7 +10,7 @@
   <a class="stat" href="/?status=active"><b>{{ counts.get('active', 0) }}</b><span>Assigned to a device</span></a>
   <a class="stat" href="/?status=unassigned"><b>{{ counts.get('unassigned', 0) }}</b><span>Not assigned yet</span></a>
   <a class="stat" href="/?status=retired"><b>{{ counts.get('retired', 0) }}</b><span>Retired</span></a>
-  {% if reprint_count %}<a class="stat alert" href="#reprint"><b>{{ reprint_count }}</b><span>Need a new label</span></a>{% endif %}
+  {% if reprint_count %}<a class="stat alert" href="/reprint"><b>{{ reprint_count }}</b><span>Need a new label</span></a>{% endif %}
 </div>
 <form class="filters" method="get" action="/">
   <input type="search" name="q" value="{{ q }}" placeholder="Code, serial, device name, model or client" aria-label="Search tags">

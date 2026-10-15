@@ -20,6 +20,8 @@
 <div class="flash" id="print-result" role="status" hidden></div>
 {% if not tag.printed_count %}<div class="flash warn">This tag hasn't been printed yet.</div>
 {% elif reprint %}<div class="flash warn">The printed label no longer matches (client, label name or format changed). Print a replacement and swap it on the device.</div>{% endif %}
+{% if tag.label_problem and tag.status != 'retired' %}<div class="flash warn">{{ label_problems.get(tag.label_problem, 'Label needs replacing') }}{% if tag.label_problem_note %}: {{ tag.label_problem_note }}{% endif %}. It's on the <a href="/reprint">Reprint list</a> until a new label is printed.
+  <form method="post" action="/tags/{{ tag.code }}/label-problem" class="inline"><input type="hidden" name="problem" value=""><button class="quiet sm" type="submit">Cancel report</button></form></div>{% endif %}
 {% if tag.status == 'retired' %}<div class="flash bad">Retired. This tag is no longer in use.{% if hudu_on and tag.hudu_state == 'archived' %} Its device was archived in Hudu.{% endif %}</div>{% endif %}
 {% if not hudu_on %}{% elif tag.hudu_state == 'missing' %}<div class="flash warn">The linked Hudu asset ({{ tag.hudu_asset_id }}) can't be found in Hudu: it may have been deleted. Link this tag to the right asset, unlink it, or retire the tag.</div>
 {% elif tag.hudu_state == 'unarchived' %}<div class="flash warn">This tag was retired because its device was archived in Hudu, but the asset is no longer archived. Restore the tag if it's still on the device, or keep it retired.
@@ -55,6 +57,15 @@
       {% set form = tag %}{% include "_device_fields.html" %}
       <div class="actions"><button class="primary" type="submit">Save</button></div>
     </form>
+    {% if tag.status != 'retired' and not tag.label_problem %}
+    <details class="small"><summary>Label damaged or missing?</summary>
+      <form class="filters" method="post" action="/tags/{{ tag.code }}/label-problem" style="margin-top:8px">
+        <select name="problem" aria-label="What's wrong with the label">{% for k, v in label_problems.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select>
+        <input type="text" name="note" maxlength="300" placeholder="Note (optional)" aria-label="Note">
+        <button class="quiet" type="submit">Add to Reprint list</button>
+      </form>
+    </details>
+    {% endif %}
     <form class="actions" method="post" action="/tags/{{ tag.code }}/status">
       {% if tag.status == 'retired' %}
         <input type="hidden" name="status" value="{{ 'active' if tag.serial or tag.device_name else 'unassigned' }}">

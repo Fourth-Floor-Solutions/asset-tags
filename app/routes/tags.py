@@ -7,12 +7,15 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from .. import auth, codes, csvout, db, hudu, hudu_archive, labels, log
 from ..tagops import (
+    LABEL_PROBLEMS,
     MAX_BATCH,
     check_format,
     clients,
     hudu_needs_sync,
     hudu_sync,
     needs_reprint,
+    reprint_queue,
+    reprint_reasons,
     svg_for,
 )
 from ..web import PUBLIC_BASE_URL, clean, flash, go, hudu_link, page
@@ -54,11 +57,7 @@ def dashboard(request: Request, q: str = "", client_id: str = "", status: str = 
     with db.connection() as conn:
         rows = conn.execute(sql, args).fetchall()
         counts = {r["status"]: r["n"] for r in conn.execute("SELECT status, COUNT(*) n FROM tags GROUP BY status")}
-        reprints = [
-            r
-            for r in conn.execute(db.TAG_SELECT + " WHERE t.printed_as IS NOT NULL AND t.status != 'retired'")
-            if needs_reprint(r)
-        ]
+        reprints = reprint_queue(conn)
         cl = clients(conn)
     return page(
         request,
@@ -254,6 +253,7 @@ def tag_detail(request: Request, code: str):
         hudu_write=hudu.write_enabled(),
         hudu_field=hudu.tag_label(),
         reprint=needs_reprint(tag),
+        label_problems=LABEL_PROBLEMS,
         qr_url=labels.qr_data(PUBLIC_BASE_URL, canon),
     )
 
@@ -356,6 +356,47 @@ def tag_status(request: Request, code: str, status: str = Form(...), reason: str
             if herr:
                 flash(request, f"Tag {action}, but Hudu wasn't updated: {herr}", "warn")
     return go(f"/tags/{code}")
+
+
+@router.post("/tags/{code}/label-problem")
+def tag_label_problem(request: Request, code: str, problem: str = Form(""), note: str = Form("")):
+    """Report that a tag's label needs replacing (puts it on the Reprint list), or clear the report."""
+    user = auth.require_user(request)
+    with db.connection() as conn:
+        tag = db.get_tag(conn, code)
+        if not tag or tag["status"] == "retired":
+            return go(f"/tags/{code}")
+        if problem in LABEL_PROBLEMS:
+            conn.execute(
+                "UPDATE tags SET label_problem=?, label_problem_note=?, updated_at=? WHERE code=?",
+                (problem, clean(note, 300), db.now(), code),
+            )
+            db.log(
+                conn,
+                code,
+                auth.label(user),
+                "label reported",
+                LABEL_PROBLEMS[problem] + (f": {clean(note, 300)}" if note.strip() else ""),
+            )
+            flash(request, "Added to the Reprint list.")
+        elif problem == "" and tag["label_problem"]:
+            conn.execute("UPDATE tags SET label_problem='', label_problem_note='' WHERE code=?", (code,))
+            db.log(conn, code, auth.label(user), "label report cleared")
+    return go(f"/tags/{code}")
+
+
+@router.get("/reprint", response_class=HTMLResponse)
+def reprint_page(request: Request):
+    auth.require_user(request)
+    with db.connection() as conn:
+        rows = reprint_queue(conn)
+    return page(
+        request,
+        "reprint.html",
+        tags=rows,
+        reasons={t["code"]: reprint_reasons(t) for t in rows},
+        code_list=",".join(t["code"] for t in rows),
+    )
 
 
 @router.post("/tags/{code}/keep-retired")
