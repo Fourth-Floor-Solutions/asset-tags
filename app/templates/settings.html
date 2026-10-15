@@ -1,11 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Set up' if setup else 'Settings' }}{% if audit and not setup %}
-<div class="card stack" style="margin-top:20px">
-  <h2>Recent changes to settings</h2>
-  <ul class="history">{% for a in audit %}<li><time>{{ a.at[:16]|replace('T', ' ') }}</time><span><b>{{ a.setting }}</b> by {{ a.actor }}{% if a.change %} · {{ a.change }}{% endif %}</span></li>{% endfor %}</ul>
-</div>
-{% endif %}
-{% endblock %}
+{% block title %}{{ 'Set up' if setup else 'Settings' }}{% endblock %}
 {% block main %}
 <div class="head"><div>
   <h1>{{ 'Set up TagDesk' if setup else 'Settings' }}</h1>

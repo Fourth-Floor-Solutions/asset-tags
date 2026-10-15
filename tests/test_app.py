@@ -394,3 +394,13 @@ def test_static_tag_background_only_when_signed_in():
     login(c)
     html = c.get("/").text
     assert 'class="tag-streams static"' in html and "--speed" not in html
+
+
+def test_settings_page_title_is_plain():
+    import re as _re
+    from app import main
+    main._login_fails.clear()
+    c = TestClient(app)
+    login(c)
+    title = _re.search(r"<title>(.*?)</title>", c.get("/settings").text, _re.S).group(1)
+    assert "<" not in title and title.startswith("Settings")

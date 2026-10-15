@@ -65,13 +65,16 @@ main { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 2
 
 /* forms */
 form.stack { display: grid; gap: 14px; }
-.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
-.field { display: grid; gap: 4px; min-width: 0; }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: start; }
+/* Fields keep their natural height so labels and inputs line up across a row; hints hang below. */
+.field { display: grid; gap: 4px; min-width: 0; align-content: start; }
 .field > label, .lbl { font-size: 12px; color: var(--muted); font-family: var(--mono); letter-spacing: .05em; text-transform: uppercase; }
 input[type=text], input[type=password], input[type=email], input[type=number], input[type=search], input[type=url], input[type=date], select, textarea {
   font: inherit; color: var(--fg); background: var(--surface); border: 1.5px solid var(--line); border-radius: 6px;
   padding: 8px 10px; width: 100%; min-width: 0;
 }
+/* One height for single-line inputs and selects (date inputs have their own default otherwise). */
+input[type=text], input[type=password], input[type=email], input[type=number], input[type=search], input[type=url], input[type=date], select { height: 42px; }
 textarea { min-height: 70px; resize: vertical; }
 input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
 .hint { font-size: 12.5px; color: var(--muted); }

@@ -39,6 +39,8 @@ First public release, under the AGPL-3.0.
 - The **Print label** button did nothing after an update, because browsers kept an old copy of the page's script. Script and stylesheet links now change with every release.
 - Batches that were meant to print as one strip came out fully cut.
 - The selection bar on the Tags list showed "0 selected" when nothing was ticked.
+- Fields on the Settings page that share a row didn't line up ([#17](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/17)).
+- The Settings page's browser tab title included stray page content.
 
 ### Security
 - Failed sign-ins are limited per IP address, and only the reverse proxy may pass on the visitor's IP.
