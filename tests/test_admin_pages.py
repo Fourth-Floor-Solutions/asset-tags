@@ -2,7 +2,7 @@
 
 from fastapi.testclient import TestClient
 
-from app import db, main, printer, settings, usage
+from app import db, printer, settings, usage, web
 from app.main import app
 from tests.test_app import login
 
@@ -94,4 +94,25 @@ def test_settings_formats_and_whats_new_render():
     c = _admin()
     assert "Label formats" in c.get("/settings").text and c.get("/changelog").status_code == 200
     assert settings.get("org_name")
-    assert main.tag_streams(rows=2, per_row=3) and len(main.tag_streams(rows=2, per_row=3)[0]) == 3
+    assert web.tag_streams(rows=2, per_row=3) and len(web.tag_streams(rows=2, per_row=3)[0]) == 3
+
+
+def test_settings_read_once_per_request(monkeypatch):
+    c = _admin()
+    calls = []
+    real = settings._load_all
+    monkeypatch.setattr(settings, "_load_all", lambda: calls.append(1) or real())
+    assert c.get("/clients").status_code == 200
+    assert len(calls) == 1
+    # Outside a request nothing is cached: each call reads the database.
+    settings.get_all()
+    settings.get_all()
+    assert len(calls) == 3
+
+
+def test_duplicate_username_is_refused(conn):
+    c = _admin()
+    form = {"username": "Admin", "email": "", "role": "user", "password": "a-long-password"}
+    r = c.post("/users/new", data=form, follow_redirects=True)
+    assert "already exists" in r.text
+    assert conn.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 1

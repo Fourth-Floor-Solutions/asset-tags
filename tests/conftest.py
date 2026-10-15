@@ -24,7 +24,8 @@ import pytest  # noqa: E402
 @pytest.fixture(autouse=True)
 def _fresh_app_state(tmp_path, monkeypatch):
     """Every test gets its own empty database and data folder, and no state left over from other tests."""
-    from app import auth, db, hudu, labels, main
+    from app import auth, db, hudu, labels
+    from app.routes import login, public
 
     # Cheap password hashing in tests: each test creates the admin account afresh.
     monkeypatch.setattr(auth, "ITERATIONS", 1000)
@@ -34,8 +35,8 @@ def _fresh_app_state(tmp_path, monkeypatch):
     db.init()
     auth.seed_admin()
     labels.apply_overrides({})
-    main._login_fails.clear()
-    main._scan_hits.clear()
+    login._login_fails.clear()
+    public._scan_hits.clear()
     hudu._layout_cache.clear()
     monkeypatch.setattr(auth, "_oauth", None)
     monkeypatch.setattr(auth, "_oauth_for", None)

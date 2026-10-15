@@ -9,9 +9,6 @@ from tests.test_app import login
 
 
 def _admin():
-    from app import main
-
-    main._login_fails.clear()
     c = TestClient(app)
     login(c)
     return c

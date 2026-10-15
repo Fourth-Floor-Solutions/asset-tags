@@ -77,6 +77,11 @@ def apply_overrides(overrides: dict) -> None:
 
     Only `enabled`, `tape_colour` and `tape` (the description) can change:
     sizes are fixed because each layout is drawn for its tape width.
+
+    FORMATS is changed in place, in this process only: it's called at startup
+    and when Settings are saved. TagDesk runs as a single uvicorn worker (see
+    the Dockerfile); with several workers, the others would keep the old
+    formats until restarted.
     """
     for key, base in BUILT_IN.items():
         FORMATS[key] = copy.deepcopy(base)

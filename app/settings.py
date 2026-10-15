@@ -16,6 +16,9 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 
 from . import db
 
@@ -61,18 +64,50 @@ ENV_FALLBACK = {
 }
 
 KEYS = tuple(DEFAULTS)
+
+# Per-request cache: a page reads settings many times (org details, Hudu, sign-in, label
+# text), so within request_scope() each value is read from the database once. Outside a
+# request (startup, scripts, tests calling functions directly) every read goes to the database.
+_cache: ContextVar[dict | None] = ContextVar("settings_cache", default=None)
+
+
+@contextmanager
+def request_scope() -> Iterator[None]:
+    token = _cache.set({})
+    try:
+        yield
+    finally:
+        _cache.reset(token)
+
+
+def _cached(key: str, load):
+    cache = _cache.get()
+    if cache is None:
+        return load()
+    if key not in cache:
+        cache[key] = load()
+    return cache[key]
+
+
+def _changed() -> None:
+    cache = _cache.get()
+    if cache is not None:
+        cache.clear()
+
+
 HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
 def get_all() -> dict:
-    conn = db.connect()
-    try:
+    return dict(_cached("all", _load_all))
+
+
+def _load_all() -> dict:
+    with db.connection() as conn:
         saved = {
             r["key"]: r["value"]
             for r in conn.execute(f"SELECT key, value FROM settings WHERE key IN ({','.join('?' * len(KEYS))})", KEYS)
         }
-    finally:
-        conn.close()
     out = {}
     for k, default in DEFAULTS.items():
         if k in ENV_WINS and os.environ.get(ENV_WINS[k], "").strip():
@@ -91,29 +126,22 @@ def get(key: str) -> str:
 
 
 def save(values: dict) -> None:
-    conn = db.connect()
-    try:
+    _changed()
+    with db.connection() as conn:
         for k, v in values.items():
             if k in DEFAULTS:
                 db.set_setting(conn, k, str(v))
-    finally:
-        conn.close()
 
 
 def setup_done() -> bool:
-    conn = db.connect()
-    try:
+    with db.connection() as conn:
         return db.get_setting(conn, "setup_done") == "1"
-    finally:
-        conn.close()
 
 
 def mark_setup_done() -> None:
-    conn = db.connect()
-    try:
+    _changed()
+    with db.connection() as conn:
         db.set_setting(conn, "setup_done", "1")
-    finally:
-        conn.close()
 
 
 def ink_for(accent: str) -> str:
@@ -154,11 +182,8 @@ def formats() -> dict:
     """Saved label-format changes: {format: {enabled, tape_colour, tape}}."""
     import json
 
-    conn = db.connect()
-    try:
+    with db.connection() as conn:
         raw = db.get_setting(conn, "label_formats")
-    finally:
-        conn.close()
     try:
         return json.loads(raw) if raw else {}
     except ValueError:
@@ -166,24 +191,19 @@ def formats() -> dict:
 
 
 def save_formats(overrides: dict) -> None:
+    _changed()
     import json
 
-    conn = db.connect()
-    try:
+    with db.connection() as conn:
         db.set_setting(conn, "label_formats", json.dumps(overrides))
-    finally:
-        conn.close()
 
 
 def source(key: str) -> str:
     """Where a setting's value comes from: "env", "saved" or "default"."""
     if key in ENV_WINS and os.environ.get(ENV_WINS[key], "").strip():
         return "env"
-    conn = db.connect()
-    try:
+    with db.connection() as conn:
         return "saved" if db.get_setting(conn, key) not in (None, "") else "default"
-    finally:
-        conn.close()
 
 
 # ---------- secrets ----------
@@ -191,16 +211,17 @@ def source(key: str) -> str:
 
 def secret_info(key: str) -> dict:
     """{"status": env | set | unset | unreadable, "value": str or None, "error": str}."""
+    return dict(_cached(f"secret:{key}", lambda: _load_secret(key)))
+
+
+def _load_secret(key: str) -> dict:
     from . import secretbox
 
     env = os.environ.get(ENV_WINS.get(key, ""), "").strip() if key in ENV_WINS else ""
     if env:
         return {"status": "env", "value": env, "error": ""}
-    conn = db.connect()
-    try:
+    with db.connection() as conn:
         stored = db.get_setting(conn, key)
-    finally:
-        conn.close()
     if not stored:
         return {"status": "unset", "value": None, "error": ""}
     try:
@@ -215,34 +236,26 @@ def secret(key: str):
 
 def save_secret(key: str, value) -> None:
     """Store a secret encrypted, or remove it when value is None or empty."""
+    _changed()
     from . import secretbox
 
-    conn = db.connect()
-    try:
+    with db.connection() as conn:
         if value:
             db.set_setting(conn, key, secretbox.encrypt(value))
         else:
             conn.execute("DELETE FROM settings WHERE key = ?", (key,))
-    finally:
-        conn.close()
 
 
 # ---------- audit ----------
 
 
 def audit(actor: str, setting: str, change: str = "") -> None:
-    conn = db.connect()
-    try:
+    with db.connection() as conn:
         conn.execute(
             "INSERT INTO audit(at, actor, setting, change) VALUES(?,?,?,?)", (db.now(), actor, setting, change[:300])
         )
-    finally:
-        conn.close()
 
 
 def recent_audit(limit: int = 15) -> list:
-    conn = db.connect()
-    try:
+    with db.connection() as conn:
         return conn.execute("SELECT * FROM audit ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
-    finally:
-        conn.close()

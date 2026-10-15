@@ -54,8 +54,7 @@ DUMMY_HASH = hash_password(secrets.token_hex(16))
 
 def seed_admin() -> None:
     """Create `admin` on first boot from ADMIN_PASSWORD if there are no users."""
-    conn = db.connect()
-    try:
+    with db.connection() as conn:
         if conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]:
             return
         pw = os.environ.get("ADMIN_PASSWORD")
@@ -65,19 +64,14 @@ def seed_admin() -> None:
             "INSERT INTO users(username, email, role, password, created_at) VALUES(?,?,?,?,?)",
             ("admin", os.environ.get("ADMIN_EMAIL", ""), "admin", hash_password(pw), db.now()),
         )
-    finally:
-        conn.close()
 
 
 def session_user(request: Request):
     uid = request.session.get("uid")
     if not uid:
         return None
-    conn = db.connect()
-    try:
+    with db.connection() as conn:
         return conn.execute("SELECT id, username, email, role, display_name FROM users WHERE id = ?", (uid,)).fetchone()
-    finally:
-        conn.close()
 
 
 def require_user(request: Request):
@@ -151,8 +145,7 @@ def sso_user_for(email: str, name: str = ""):
     email = (email or "").strip().lower()
     if not email:
         return None
-    conn = db.connect()
-    try:
+    with db.connection() as conn:
         name = (name or "").strip()[:80]
         row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
         if row:
@@ -170,5 +163,3 @@ def sso_user_for(email: str, name: str = ""):
             (email, email, "user", None, db.now(), name),
         )
         return conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-    finally:
-        conn.close()
