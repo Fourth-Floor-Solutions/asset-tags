@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from .. import auth, codes, db, hudu, hudu_archive, labels
+from .. import auth, codes, csvout, db, hudu, hudu_archive, labels, log
 from ..tagops import (
     MAX_BATCH,
     check_format,
@@ -20,15 +20,8 @@ from ..web import PUBLIC_BASE_URL, clean, flash, go, hudu_link, page
 router = APIRouter()
 
 
-@router.get("/", response_class=HTMLResponse)
-def dashboard(request: Request, q: str = "", client_id: str = "", status: str = ""):
-    auth.require_user(request)
-    q = q.strip()
-    code = codes.parse(q) if q else None
-    if code:
-        with db.connection() as conn:
-            if db.get_tag(conn, code):
-                return go(f"/tags/{code}")
+def _tag_filter(q: str, client_id: str, status: str) -> tuple[str, list]:
+    """The Tags list's search and filters as a WHERE clause (shared with the CSV export)."""
     where: list[str] = []
     args: list[object] = []
     if q:
@@ -44,7 +37,20 @@ def dashboard(request: Request, q: str = "", client_id: str = "", status: str = 
     if status in ("unassigned", "active", "retired"):
         where.append("t.status = ?")
         args.append(status)
-    sql = db.TAG_SELECT + (" WHERE " + " AND ".join(where) if where else "") + " ORDER BY t.updated_at DESC LIMIT 300"
+    return (" WHERE " + " AND ".join(where) if where else ""), args
+
+
+@router.get("/", response_class=HTMLResponse)
+def dashboard(request: Request, q: str = "", client_id: str = "", status: str = ""):
+    auth.require_user(request)
+    q = q.strip()
+    code = codes.parse(q) if q else None
+    if code:
+        with db.connection() as conn:
+            if db.get_tag(conn, code):
+                return go(f"/tags/{code}")
+    where_sql, args = _tag_filter(q, client_id, status)
+    sql = db.TAG_SELECT + where_sql + " ORDER BY t.updated_at DESC LIMIT 300"
     with db.connection() as conn:
         rows = conn.execute(sql, args).fetchall()
         counts = {r["status"]: r["n"] for r in conn.execute("SELECT status, COUNT(*) n FROM tags GROUP BY status")}
@@ -65,6 +71,61 @@ def dashboard(request: Request, q: str = "", client_id: str = "", status: str = 
         reprint_count=len(reprints),
         clients=cl,
         needs_reprint=needs_reprint,
+    )
+
+
+EXPORT_STATUS = {"active": "Assigned", "unassigned": "Not assigned", "retired": "Retired"}
+
+
+@router.get("/tags.csv")
+def tags_csv(request: Request, q: str = "", client_id: str = "", status: str = ""):
+    """The Tags list as CSV, with the same search and filters, and no row limit."""
+    user = auth.require_user(request)
+    where_sql, args = _tag_filter(q.strip(), client_id, status)
+    with db.connection() as conn:
+        rows = conn.execute(db.TAG_SELECT + where_sql + " ORDER BY c.name COLLATE NOCASE, t.code", args).fetchall()
+        name = "tags"
+        if client_id.isdigit():
+            c = conn.execute("SELECT name FROM clients WHERE id = ?", (int(client_id),)).fetchone()
+            name = f"tags-{csvout.safe_name(c['name'])}" if c else name
+    log.get("tags").info("%s exported %d tags as CSV", auth.label(user), len(rows))
+    return csvout.response(
+        [
+            "Code",
+            "Status",
+            "Format",
+            "Client",
+            "Device",
+            "Model",
+            "Serial",
+            "Hudu asset",
+            "Hudu link",
+            "Printed",
+            "Last printed",
+            "Created",
+            "Updated",
+            "Notes",
+        ],
+        (
+            [
+                t["code"],
+                EXPORT_STATUS.get(t["status"], t["status"]),
+                labels.FORMATS.get(t["format"], {}).get("name", t["format"]),
+                t["client_name"],
+                t["device_name"],
+                t["model"],
+                t["serial"],
+                t["hudu_asset_id"],
+                t["hudu_asset_url"],
+                t["printed_count"],
+                t["printed_at"],
+                t["created_at"],
+                t["updated_at"],
+                t["notes"],
+            ]
+            for t in rows
+        ),
+        f"{name}-{db.now()[:10]}.csv",
     )
 
 

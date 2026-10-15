@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import csv
-import io
-
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse
 
-from .. import auth, coverage, db, hudu, settings
+from .. import auth, coverage, csvout, db, hudu, settings
 from ..web import flash, go, page
 
 router = APIRouter()
@@ -103,12 +100,6 @@ def coverage_refresh_one(request: Request, client_id: int):
     return go(f"/coverage/{client_id}")
 
 
-def _cell(v) -> str:
-    """CSV cell that a spreadsheet won't run as a formula."""
-    s = "" if v is None else str(v)
-    return "'" + s if s[:1] in ("=", "+", "-", "@", "\t", "\r") else s
-
-
 @router.get("/coverage/{client_id}/untagged.csv")
 def coverage_csv(request: Request, client_id: int):
     auth.require_user(request)
@@ -118,14 +109,8 @@ def coverage_csv(request: Request, client_id: int):
         if not c:
             return go("/coverage")
         cov = coverage.for_client(conn, c)
-    buf = io.StringIO()
-    w = csv.writer(buf)
-    w.writerow(["Device", "Type", "Model", "Serial", "Hudu link"])
-    for a in cov["untagged"]:
-        w.writerow([_cell(a["name"]), _cell(a["type"]), _cell(a["model"]), _cell(a["serial"]), _cell(a["url"])])
-    name = "".join(ch if ch.isalnum() else "-" for ch in c["name"]).strip("-")[:40] or "client"
-    return Response(
-        "﻿" + buf.getvalue(),
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="untagged-{name}.csv"'},
+    return csvout.response(
+        ["Device", "Type", "Model", "Serial", "Hudu link"],
+        ([a["name"], a["type"], a["model"], a["serial"], a["url"]] for a in cov["untagged"]),
+        f"untagged-{csvout.safe_name(c['name'])}.csv",
     )

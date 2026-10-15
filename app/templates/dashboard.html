@@ -24,6 +24,7 @@
   </select>
   <button class="quiet" type="submit">Filter</button>
   {% if q or client_id or status %}<a class="btn quiet" href="/">Clear</a>{% endif %}
+  <a class="btn quiet" href="/tags.csv?{{ {'q': q, 'client_id': client_id, 'status': status}|urlencode }}">Export CSV</a>
 </form>
 {% if tags %}
 <div class="select-bar" id="select-bar" hidden>
