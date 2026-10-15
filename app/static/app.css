@@ -87,6 +87,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .btn.quiet, button.quiet { border-color: var(--line); }
 .btn.sm, button.sm { padding: 2px 8px; font-size: 12px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+/* A field and its Set button on one line, e.g. in a table row. */
+.inline-set { display: flex; gap: 8px; align-items: center; margin: 0; }
+.inline-set input { width: 180px; flex: none; }
+.inline-set select { width: auto; }
 
 /* format picker */
 .formats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
