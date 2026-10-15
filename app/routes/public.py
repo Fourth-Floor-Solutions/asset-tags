@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict, deque
+from urllib.parse import quote
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
@@ -12,7 +13,7 @@ from .. import changelog, codes, db, settings, version
 from ..tagops import (
     label_name,
 )
-from ..web import go, page, tel_link
+from ..web import PUBLIC_BASE_URL, go, page, tel_link
 
 router = APIRouter()
 
@@ -113,4 +114,27 @@ def scan(request: Request, raw: str):
         support_email=org["support_email"],
         org=org,
         owner=(label_name(tag, org) if tag and tag["format"] != "loan" else None),
+        report_href=report_mailto(tag, org) if tag and tag["status"] != "retired" else "",
     )
+
+
+def report_mailto(tag, org: dict) -> str:
+    """A mailto: link to the support desk with the device's details filled in (no server-side form)."""
+    email = (org.get("support_email") or "").strip()
+    if not email or "@" not in email:
+        return ""
+    client = org["org_short"] if tag["format"] == "loan" else (tag["client_name"] or "")
+    device = tag["device_name"] or tag["model"] or "device"
+    values = {"code": tag["code"], "device": device, "client": client}
+    template = org.get("report_subject") or "Problem with {code}"
+    subject = template
+    for k, v in values.items():
+        subject = subject.replace("{" + k + "}", v)
+    body = (
+        f"Tag: {tag['code']}\n"
+        f"Device: {tag['device_name'] or '-'}\n"
+        f"Client: {client or '-'}\n"
+        f"Link: {PUBLIC_BASE_URL}/{tag['code']}\n\n"
+        "What's wrong?\n\n"
+    )
+    return f"mailto:{quote(email, safe='@')}?subject={quote(subject[:200])}&body={quote(body)}"
