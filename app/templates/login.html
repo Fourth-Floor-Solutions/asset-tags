@@ -1,7 +1,21 @@
 {% extends "base.html" %}
 {% block title %}Sign in{% endblock %}
 {% block main %}
-<div class="card narrow">
+{# Decorative: rows of asset tags in the accent colour drifting behind the card. #}
+<div class="tag-streams" aria-hidden="true">
+  {% for row in streams %}{% set row_offset = loop.index0 * 3 %}
+  <div class="stream" style="--speed: {{ 70 + (loop.index * 37) % 60 }}s; --dir: {{ 'normal' if loop.index is odd else 'reverse' }}; --fade: {{ [0.35, 0.55, 0.8, 0.5, 0.65][loop.index % 5] }}">
+    <div class="stream-track">
+      {% for pass in range(2) %}{% for code in row %}{% set size = ['t18', 't12', 't18', 't6', 't12', 't6', 't18'][(loop.index0 + row_offset) % 7] %}
+      {%- if size == 't18' -%}<span class="mtag t18"><i class="mqr"></i><span class="mtxt"><em></em><b>{{ code }}</b><em class="thin"></em></span></span>
+      {%- elif size == 't12' -%}<span class="mtag t12"><i class="mqr"></i><b>{{ code }}</b></span>
+      {%- else -%}<span class="mtag t6"><i class="mmark">{{ org.org_mark }}</i><b>{{ code }}</b></span>{%- endif %}
+      {%- endfor %}{% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<div class="card narrow login-card">
   <div class="brand"><span class="brand-mark">{{ org.org_mark }}</span> TagDesk</div>
   <h1>Sign in</h1>
   {% if error %}<div class="flash bad">{{ error }}</div>{% endif %}
@@ -24,4 +38,8 @@
   {{ local_form }}
   {% endif %}
 </div>
+{% endblock %}
+{% block footer %}
+{# No version here; the AGPL source link stays. #}
+<footer class="foot login-foot">{{ org.org_name }} · <a href="{{ source_url }}" rel="noopener">TagDesk</a> is free software · <a href="{{ source_url }}" rel="noopener">source code</a></footer>
 {% endblock %}

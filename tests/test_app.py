@@ -353,10 +353,10 @@ def test_version_in_footer_and_endpoint(monkeypatch):
     from app import __version__, version
     c = TestClient(app)
     assert c.get("/version").json()["version"] == __version__
-    html = c.get("/login").text
+    html = c.get("/changelog").text
     assert f"v{__version__}" in html and f"/releases/tag/v{__version__}" in html
     monkeypatch.setattr(version, "COMMIT", "abc1234def")
-    assert "abc1234" in TestClient(app).get("/login").text
+    assert "abc1234" in TestClient(app).get("/changelog").text
     monkeypatch.setenv("GIT_COMMIT", "not a commit!")
     assert version._commit() == ""
 
@@ -373,3 +373,11 @@ def test_batch_cut_choice_carries_to_print_page():
     assert 'data-initial="cut"' in c.get(r.headers["location"]).text
     r = c.post("/tags/batch", data={"client_id": cid, "format": "standard", "count": "2"}, follow_redirects=False)
     assert r.headers["location"].endswith("&cut=strip")
+
+
+def test_login_page_tag_streams_and_no_version():
+    from app import __version__
+    html = TestClient(app).get("/login").text
+    assert 'class="tag-streams" aria-hidden="true"' in html and html.count('class="mtag ') >= 100
+    assert all(f'class="mtag {s}"' in html for s in ("t18", "t12", "t6"))     # a mix of tape sizes
+    assert f"v{__version__}" not in html and "source code" in html

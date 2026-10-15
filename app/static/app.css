@@ -171,3 +171,34 @@ select.strip-opt { width: auto; padding: 6px 8px; font-size: 13px; }
 .changelog-day ul { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 4px; }
 .changelog-day h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-family: var(--mono); font-weight: 500; }
 .changelog-day h2 .pill { font-size: 12px; vertical-align: middle; text-decoration: none; }
+
+/* ---------- sign-in page: streams of tags in the accent colour ---------- */
+.tag-streams { position: fixed; inset: -20vh -20vw; z-index: 0; overflow: hidden; pointer-events: none;
+  display: flex; flex-direction: column; justify-content: center; gap: 18px; transform: rotate(-9deg); }
+.stream { opacity: var(--fade); }
+.stream-track { display: flex; gap: 14px; width: max-content; animation: tag-drift var(--speed) linear infinite; animation-direction: var(--dir); }
+@keyframes tag-drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.stream-track { align-items: center; }
+/* Three tape widths in proportion: 18 mm Standard, 12 mm Slim, 6 mm Micro. */
+.mtag { display: inline-flex; align-items: center; flex: none; border-radius: 4px;
+  background: var(--accent); color: var(--accent-ink); box-shadow: 0 1px 2px rgba(0,0,0,.18); }
+.mtag b { font: 800 19px var(--mono); letter-spacing: .12em; line-height: 1; }
+.mqr { flex: none; border: 3px solid var(--accent-ink); border-radius: 2px;
+  background: repeating-conic-gradient(var(--accent-ink) 0 25%, transparent 0 50%) 0 0 / 8px 8px; }
+.mtag.t18 { height: 54px; gap: 10px; padding: 0 18px 0 8px; }
+.mtag.t18 .mqr { width: 38px; height: 38px; }
+.mtag.t18 .mtxt { display: grid; gap: 5px; }
+.mtag.t18 .mtxt b { font-size: 22px; }
+.mtag.t18 em { display: block; height: 5px; width: 64%; border-radius: 3px; background: var(--accent-ink); opacity: .85; }
+.mtag.t18 em.thin { height: 3px; width: 92%; opacity: .55; }
+.mtag.t12 { height: 36px; gap: 8px; padding: 0 14px 0 6px; }
+.mtag.t12 .mqr { width: 26px; height: 26px; border-width: 2px; background-size: 6px 6px; }
+.mtag.t12 b { font-size: 16px; }
+.mtag.t6 { height: 19px; gap: 5px; padding: 0 8px 0 3px; border-radius: 3px; }
+.mtag.t6 .mmark { font: 800 8px var(--display); font-style: normal; display: grid; place-items: center;
+  width: 14px; height: 14px; border-radius: 2px; background: var(--accent-ink); color: var(--accent); }
+.mtag.t6 b { font-size: 11px; letter-spacing: .08em; }
+.login-card { position: relative; z-index: 1; margin-top: 12vh; box-shadow: 0 10px 40px rgba(0,0,0,.18); }
+.login-foot { position: relative; z-index: 1; text-align: center; background: color-mix(in srgb, var(--bg) 85%, transparent);
+  width: fit-content; margin: 18px auto 0; padding: 6px 12px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { .stream-track { animation: none; } }
