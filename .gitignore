@@ -5,3 +5,5 @@ __pycache__/
 *.pyc
 backups/
 app/BUILD
+.coverage
+htmlcov/
