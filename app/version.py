@@ -3,6 +3,7 @@
 The commit comes from the GIT_COMMIT environment variable (a Docker build
 argument), or from app/BUILD written at deploy time. Neither is required.
 """
+
 from __future__ import annotations
 
 import os

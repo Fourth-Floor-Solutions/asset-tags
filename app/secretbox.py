@@ -6,10 +6,10 @@ with owner-only permissions. A copy of the database on its own therefore
 doesn't reveal the secrets. If the key changes or is lost, decrypt() raises
 SecretUnreadable so the app can ask for the secret to be entered again.
 """
+
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 from cryptography.fernet import Fernet, InvalidToken
 
@@ -45,14 +45,15 @@ def encrypt(value: str) -> str:
     return PREFIX + Fernet(_key()).encrypt(value.encode()).decode()
 
 
-def decrypt(stored: Optional[str]) -> Optional[str]:
+def decrypt(stored: str | None) -> str | None:
     if not stored:
         return None
     if not stored.startswith(PREFIX):
         raise SecretUnreadable("The stored value isn't in the expected format.")
     try:
-        return Fernet(_key()).decrypt(stored[len(PREFIX):].encode()).decode()
+        return Fernet(_key()).decrypt(stored[len(PREFIX) :].encode()).decode()
     except (InvalidToken, ValueError) as e:
         raise SecretUnreadable(
             "It was saved with a different encryption key (the data folder's secret.key or "
-            "TAGDESK_SECRET_KEY changed). Enter it again.") from e
+            "TAGDESK_SECRET_KEY changed). Enter it again."
+        ) from e

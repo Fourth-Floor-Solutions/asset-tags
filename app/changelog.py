@@ -6,13 +6,13 @@ that day. Under each date, "### Added / Changed / Fixed / Security / Removed"
 sections hold "- " bullet points. Everything on the same day goes under one
 heading; `check()` rejects repeated or out-of-order dates.
 """
+
 from __future__ import annotations
 
 import os
 import re
 from datetime import date, datetime
 from html import escape
-from typing import Optional
 
 PATH = os.path.join(os.path.dirname(__file__), "..", "CHANGELOG.md")
 TYPES = ("Added", "Changed", "Fixed", "Security", "Removed")
@@ -54,7 +54,7 @@ def parse(text: str) -> list:
         elif line.startswith("- ") and section is not None:
             section.append(line[2:].strip())
         elif line.startswith("  ") and section:
-            section[-1] += " " + line.strip()           # wrapped bullet
+            section[-1] += " " + line.strip()  # wrapped bullet
         elif line.strip() and current is not None and section is None:
             current["intro"].append(line.strip())
     return days
@@ -65,7 +65,9 @@ def check(days: list) -> None:
     seen = set()
     for i, d in enumerate(days):
         if d["date"] in seen:
-            raise ChangelogError(f"{d['date']:%d %B %Y} appears more than once; put everything from that day under one heading.")
+            raise ChangelogError(
+                f"{d['date']:%d %B %Y} appears more than once; put everything from that day under one heading."
+            )
         seen.add(d["date"])
         if i and d["date"] > days[i - 1]["date"]:
             raise ChangelogError(f"{d['date']:%d %B %Y} is out of order; newest dates go first.")
@@ -80,7 +82,7 @@ def load(path: str = PATH) -> list:
     return days
 
 
-def for_version(days: list, version: str) -> Optional[dict]:
+def for_version(days: list, version: str) -> dict | None:
     """The date section a version was released in (for release notes)."""
     v = version if version.startswith("v") else f"v{version}"
     return next((d for d in days if v in d["versions"]), None)

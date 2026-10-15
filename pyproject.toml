@@ -1,0 +1,26 @@
+# Tool settings. The app itself is installed from requirements.txt (see README).
+[project]
+name = "tagdesk"
+dynamic = ["version"]
+requires-python = ">=3.14"
+license = "AGPL-3.0-only"
+
+[tool.ruff]
+line-length = 120
+target-version = "py314"
+extend-exclude = ["app/fonts"]
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, import order, bugbear, pyupgrade, simplify, comprehensions
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "C4"]
+ignore = [
+    "E501",    # long lines: the formatter handles code; long strings stay readable
+    "B008",    # FastAPI's Form(...) defaults in signatures are the intended pattern
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "scripts", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q -p no:cacheprovider"

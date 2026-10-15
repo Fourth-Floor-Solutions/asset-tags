@@ -11,6 +11,7 @@ Two kinds of environment link:
 
 Secrets (SECRET_KEYS) are stored encrypted (see secretbox) and never shown.
 """
+
 from __future__ import annotations
 
 import os
@@ -35,7 +36,7 @@ DEFAULTS = {
     "sso_auto_domains": "",
     "entra_tenant_id": "",
     "entra_client_id": "",
-    "entra_secret_expires": "",           # YYYY-MM-DD, for the expiry warning
+    "entra_secret_expires": "",  # YYYY-MM-DD, for the expiry warning
     "source_url": "https://github.com/Fourth-Floor-Solutions/tagdesk",
 }
 
@@ -66,8 +67,10 @@ HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 def get_all() -> dict:
     conn = db.connect()
     try:
-        saved = {r["key"]: r["value"] for r in conn.execute(
-            f"SELECT key, value FROM settings WHERE key IN ({','.join('?' * len(KEYS))})", KEYS)}
+        saved = {
+            r["key"]: r["value"]
+            for r in conn.execute(f"SELECT key, value FROM settings WHERE key IN ({','.join('?' * len(KEYS))})", KEYS)
+        }
     finally:
         conn.close()
     out = {}
@@ -116,19 +119,24 @@ def mark_setup_done() -> None:
 def ink_for(accent: str) -> str:
     """Black or white text, whichever reads better on the accent colour."""
     try:
-        r, g, b = (int(accent[i:i + 2], 16) / 255 for i in (1, 3, 5))
+        r, g, b = (int(accent[i : i + 2], 16) / 255 for i in (1, 3, 5))
     except (ValueError, TypeError):
         return "#16181c"
-    lin = lambda c: c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+    def lin(c: float) -> float:  # sRGB channel to linear light
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
     luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
     return "#16181c" if luminance > 0.25 else "#ffffff"
 
 
 def fill(template: str, s: dict) -> str:
     """Label wording with {name}, {short} and {SHORT} filled in."""
-    return (template.replace("{name}", s["org_name"])
-                    .replace("{short}", s["org_short"])
-                    .replace("{SHORT}", s["org_short"].upper()))
+    return (
+        template.replace("{name}", s["org_name"])
+        .replace("{short}", s["org_short"])
+        .replace("{SHORT}", s["org_short"].upper())
+    )
 
 
 def label_text(s: dict) -> dict:
@@ -180,6 +188,7 @@ def source(key: str) -> str:
 
 # ---------- secrets ----------
 
+
 def secret_info(key: str) -> dict:
     """{"status": env | set | unset | unreadable, "value": str or None, "error": str}."""
     from . import secretbox
@@ -220,11 +229,13 @@ def save_secret(key: str, value) -> None:
 
 # ---------- audit ----------
 
+
 def audit(actor: str, setting: str, change: str = "") -> None:
     conn = db.connect()
     try:
-        conn.execute("INSERT INTO audit(at, actor, setting, change) VALUES(?,?,?,?)",
-                     (db.now(), actor, setting, change[:300]))
+        conn.execute(
+            "INSERT INTO audit(at, actor, setting, change) VALUES(?,?,?,?)", (db.now(), actor, setting, change[:300])
+        )
     finally:
         conn.close()
 

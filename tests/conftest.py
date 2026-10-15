@@ -18,4 +18,5 @@ def _no_real_snmp(monkeypatch):
 
     def offline(host, oid, *a, **k):
         raise printer.PrinterError("no network in tests")
+
     monkeypatch.setattr(printer, "_snmp_get", offline)

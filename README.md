@@ -363,12 +363,20 @@ The running version is also at `/version`. Changes are listed in
 
 ## Development
 
+TagDesk targets Python 3.14, the same as the Docker image. With
+[uv](https://docs.astral.sh/uv/):
+
 ```sh
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt pytest
+uv python install 3.14
+uv venv --python 3.14 .venv
+uv pip install --python .venv/bin/python -r requirements-dev.txt
 cp .env.example .env    # set ADMIN_PASSWORD, PUBLIC_BASE_URL=http://localhost:8080, COOKIE_INSECURE=1
 ./run-dev.sh            # http://localhost:8080 with auto-reload
-.venv/bin/python -m pytest -q
+.venv/bin/pytest        # tests
+.venv/bin/ruff check . && .venv/bin/ruff format .   # lint and format
 ```
+
+Pull requests run the same lint, the tests and a dependency audit in CI.
 
 **Changelog:** add a line for every user-visible change under **today's
 date** in `CHANGELOG.md`, in the same commit. If today's date is already

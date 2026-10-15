@@ -8,6 +8,7 @@ def test_repo_changelog_is_valid():
     days = changelog.load()
     assert days, "CHANGELOG.md has no dated sections"
     from app import __version__
+
     assert changelog.for_version(days, __version__), f"v{__version__} isn't under any date in CHANGELOG.md"
 
 
@@ -35,7 +36,9 @@ def test_rejects_unknown_section_and_bad_heading():
 
 
 def test_versions_and_inline_html():
-    d = _days("## 2 May 2026 · v1.2.0, v1.2.1\n### Fixed\n- A **bold** fix, see [#3](https://example.com/3) and `x<y`\n")[0]
+    d = _days(
+        "## 2 May 2026 · v1.2.0, v1.2.1\n### Fixed\n- A **bold** fix, see [#3](https://example.com/3) and `x<y`\n"
+    )[0]
     assert d["versions"] == ["v1.2.0", "v1.2.1"]
     html = changelog.inline_html(d["sections"]["Fixed"][0])
     assert "<b>bold</b>" in html and '<a href="https://example.com/3"' in html and "<code>x&lt;y</code>" in html
@@ -45,6 +48,8 @@ def test_versions_and_inline_html():
 
 def test_whats_new_page():
     from fastapi.testclient import TestClient
+
     from app.main import app
+
     html = TestClient(app).get("/changelog").text
     assert "What's new" in html and "15 October 2026" in html and "Print label" in html

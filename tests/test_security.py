@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app import auth, main, settings
+from app import main, settings
 from app.main import app, safe_next
 from tests.test_app import internal_client_id, login
 
@@ -13,8 +13,18 @@ def _admin():
     return c
 
 
-@pytest.mark.parametrize("bad", ["//evil.example", "/\\evil.example", "https://evil.example", "javascript:alert(1)",
-                                 "/\\/evil.example", "/ok\\..\\x", "/x\r\nLocation: //evil"])
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "//evil.example",
+        "/\\evil.example",
+        "https://evil.example",
+        "javascript:alert(1)",
+        "/\\/evil.example",
+        "/ok\\..\\x",
+        "/x\r\nLocation: //evil",
+    ],
+)
 def test_safe_next_rejects_other_sites(bad):
     assert safe_next(bad) == "/"
 
@@ -26,8 +36,11 @@ def test_safe_next_keeps_local_paths():
 def test_login_and_sso_redirects_are_safe():
     c = TestClient(app)
     main._login_fails.clear()
-    r = c.post("/login", data={"username": "admin", "password": "test-password-123", "next": "/\\evil.example"},
-               follow_redirects=False)
+    r = c.post(
+        "/login",
+        data={"username": "admin", "password": "test-password-123", "next": "/\\evil.example"},
+        follow_redirects=False,
+    )
     assert r.headers["location"] == "/"
 
 
@@ -35,10 +48,22 @@ def test_hudu_link_only_on_configured_host():
     c = _admin()
     settings.save({"hudu_url": "https://hudu.example.com"})
     cid = internal_client_id(c)
-    for url, kept in (("javascript:alert(1)", False), ("https://evil.example/a/x", False),
-                      ("https://hudu.example.com/a/asset-1", True)):
-        r = c.post("/tags/new", data={"client_id": cid, "format": "standard", "device_name": "D",
-                                      "hudu_asset_id": "5", "hudu_asset_url": url}, follow_redirects=False)
+    for url, kept in (
+        ("javascript:alert(1)", False),
+        ("https://evil.example/a/x", False),
+        ("https://hudu.example.com/a/asset-1", True),
+    ):
+        r = c.post(
+            "/tags/new",
+            data={
+                "client_id": cid,
+                "format": "standard",
+                "device_name": "D",
+                "hudu_asset_id": "5",
+                "hudu_asset_url": url,
+            },
+            follow_redirects=False,
+        )
         code = r.headers["location"].rsplit("/", 1)[1]
         page = c.get(f"/tags/{code}").text
         assert (url in page) is kept
@@ -63,7 +88,9 @@ def test_security_headers():
 def test_multi_tenant_refused():
     c = _admin()
     base = {"org_name": "Test Org", "org_mark": "TO", "accent": "#5b8def"}
-    r = c.post("/settings", data=dict(base, entra_tenant_id="common", entra_client_id="11111111-2222-3333-4444-555555555555"))
+    r = c.post(
+        "/settings", data=dict(base, entra_tenant_id="common", entra_client_id="11111111-2222-3333-4444-555555555555")
+    )
     assert r.status_code == 400 and "common" in r.text
 
 
