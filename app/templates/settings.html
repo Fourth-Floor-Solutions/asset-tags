@@ -31,6 +31,12 @@
       <div class="field"><label for="support_phone">Phone</label><input type="text" id="support_phone" name="support_phone" value="{{ s.support_phone }}" maxlength="40" placeholder="+44 (0)20 0000 0000"></div>
       <div class="field"><label for="support_email">Email</label><input type="email" id="support_email" name="support_email" value="{{ s.support_email }}" maxlength="120" placeholder="support@example.com"></div>
     </div>
+    <div class="row">
+      <div class="field"><label for="report_button">Report button</label><input type="text" id="report_button" name="report_button" value="{{ s.report_button }}" maxlength="40">
+        <span class="hint">Opens an email to the support address with the device's details filled in. Shown when a support email is set.</span></div>
+      <div class="field"><label for="report_subject">Report email subject</label><input type="text" id="report_subject" name="report_subject" value="{{ s.report_subject }}" maxlength="120">
+        <span class="hint">Use <code>{code}</code>, <code>{device}</code> and <code>{client}</code>.</span></div>
+    </div>
   </div>
 
   <div class="card stack">

@@ -15,6 +15,15 @@
     <h1>We don't recognise this code</h1>
     <p>Check the code on the label. If you still need help, contact {{ org.org_name }}.</p>
   {% endif %}
+  {% if tag and tag.status == 'retired' %}
+  <p class="muted">{{ org.org_name }} no longer manages this device.</p>
+  {% endif %}
+  {% if report_href or support_phone %}
+  <div class="actions report-actions">
+    {% if report_href %}<a class="btn primary" href="{{ report_href }}">{{ org.report_button or 'Report a problem' }}</a>{% endif %}
+    {% if support_phone and tag and tag.status != 'retired' %}<a class="btn" href="tel:{{ support_tel }}">Call support</a>{% endif %}
+  </div>
+  {% endif %}
   {% if support_phone or support_email %}
   <dl class="meta">
     {% if support_phone %}<dt>Phone</dt><dd><a href="tel:{{ support_tel }}">{{ support_phone }}</a></dd>{% endif %}

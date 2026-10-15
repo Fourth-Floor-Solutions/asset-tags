@@ -31,6 +31,8 @@ DEFAULTS = {
     "accent": "#5b8def",
     "support_phone": "",
     "support_email": "",
+    "report_button": "Report a problem",
+    "report_subject": "Problem with {code} ({device}, {client})",
     "label_managed": "Managed by {name}",
     "label_loan_top": "{SHORT} · LOAN",
     "label_loan_bottom": "Please return to {name}",
