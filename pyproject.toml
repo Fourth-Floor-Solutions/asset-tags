@@ -24,3 +24,5 @@ known-first-party = ["app", "scripts", "tests"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q -p no:cacheprovider"
+# An unclosed database connection is a bug: fail the test run.
+filterwarnings = ["error::ResourceWarning", "error::pytest.PytestUnraisableExceptionWarning"]
