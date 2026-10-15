@@ -7,8 +7,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;800&display=swap">
 <link rel="icon" href="{{ favicon }}" type="image/svg+xml">
-<style>:root { --accent: {{ org.accent }}; --accent-ink: {{ accent_ink }}; }</style>
 <link rel="stylesheet" href="{{ static('app.css') }}">
+{# After app.css, so the organisation's accent overrides the stylesheet's default. #}
+<style>:root { --accent: {{ org.accent }}; --accent-ink: {{ accent_ink }}; }</style>
 <script src="{{ static('app.js') }}" defer></script>
 <style>
   /* One named page per tape size, so a mixed job still prints each label at its real size. */

@@ -336,3 +336,14 @@ def test_legacy_database_name_is_renamed(tmp_path, monkeypatch):
     conn = db.connect()
     assert conn.execute("SELECT name FROM sqlite_master WHERE name = 't'").fetchone()
     assert (tmp_path / "tagdesk.db").exists() and not old.exists()
+
+
+def test_saved_accent_overrides_stylesheet_default():
+    """The inline accent must come after app.css, or the stylesheet's default wins."""
+    from app import settings
+    settings.save({"accent": "#00aaff"})
+    try:
+        html = TestClient(app).get("/login").text
+        assert html.index("--accent: #00aaff") > html.index("/static/app.css")
+    finally:
+        settings.save({"accent": settings.DEFAULTS["accent"]})
