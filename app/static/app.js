@@ -164,3 +164,26 @@ function initPrintButtons() {
   update();
 }
 document.addEventListener("DOMContentLoaded", initPrintButtons);
+
+// Batch cutting: remember the last choice in this browser (default: one strip).
+function initStripMode() {
+  var sel = document.getElementById("strip-mode");
+  if (!sel) return;
+  // A choice passed in from Print a batch wins; otherwise use this browser's last choice.
+  var initial = sel.dataset.initial;
+  try {
+    var saved = localStorage.getItem("tagdesk-strip-mode");
+    if (initial === "cut" || initial === "strip") {
+      sel.value = initial;
+      localStorage.setItem("tagdesk-strip-mode", initial);
+    } else if (saved === "cut" || saved === "strip") {
+      sel.value = saved;
+    }
+  } catch (e) {
+    if (initial === "cut" || initial === "strip") sel.value = initial;
+  }
+  sel.addEventListener("change", function () {
+    try { localStorage.setItem("tagdesk-strip-mode", sel.value); } catch (e) {}
+  });
+}
+document.addEventListener("DOMContentLoaded", initStripMode);

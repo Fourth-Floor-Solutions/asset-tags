@@ -4,6 +4,7 @@ WORKDIR /srv
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
+COPY CHANGELOG.md ./
 # Optional: the git commit this image was built from, shown in the footer.
 ARG GIT_COMMIT=""
 ENV GIT_COMMIT=$GIT_COMMIT

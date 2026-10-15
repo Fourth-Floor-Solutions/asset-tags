@@ -1,15 +1,54 @@
 # Changelog
 
-All notable changes to TagDesk. Versions follow [semantic versioning](https://semver.org).
+What changed in TagDesk, newest first. Everything that changed on the same
+day is listed under that one date, with any versions released that day in
+the heading. Versions follow [semantic versioning](https://semver.org).
 
-## [0.1.0] - 2026-10-15
+## 15 October 2026 · v0.1.0
 
-First public release.
+First public release, under the AGPL-3.0.
 
-- Issue client-branded asset tags with permanent five-character codes and QR codes.
-- Print straight to a Brother PT-P950NW (raster over TCP 9100, status over SNMP), with a check that the right cassette is loaded, per-printer calibration, several printers, tape-use tracking, and batches cut separately or as one strip with cut lines.
-- Public scan page showing the owner, device name and support contact.
-- Optional Hudu integration: client sync, asset linking, and writing the tag code into the asset.
-- Local accounts and optional Microsoft Entra ID sign-in, with admin and user roles.
-- Settings page and first-run setup for organisation details, label wording and formats, Hudu and sign-in options.
-- Version number and build commit in the footer and at `/version`.
+### Added
+- Print straight to a Brother PT-P950NW over the network, with a check that the right tape cassette is loaded before each job.
+- **Print label** on a tag's page, and tick boxes with **Print selected** on the Tags list.
+- Batches can come out cut into separate labels or as one strip with dashed cut lines, to cut by hand on site.
+- Several label printers: each label goes to the first printer with the right tape loaded. Printers can be added, renamed, re-addressed, calibrated and removed on the Printer page.
+- Per-printer vertical position calibration.
+- Tape tracking: roughly how much tape is left in each cassette, from the printer's print-length counter, with a warning when it's low.
+- Settings page and a first-run setup screen for your organisation's name, mark, accent colour, support contact, label wording, loan client, label formats, Hudu and sign-in options.
+- Configurable label formats: switch formats on or off and choose the tape colour and description for each.
+- Display names for users, editable on their account page; tag history shows names, not usernames.
+- Sign in with your email address as well as your username.
+- The device name on the public scan page.
+- Version number and build in the footer, and at `/version`.
+- This changelog, grouped by date, and a What's new page linked from the footer ([#13](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/13)).
+
+### Changed
+- Renamed the project from Asset Tags to TagDesk.
+- When Microsoft sign-in is set up, the sign-in page shows only **Sign in with Microsoft**, with the local form behind **Use a local account**.
+- Button text switches between black and white to suit the accent colour.
+- The reverse proxy's address is a setting (`FORWARDED_ALLOW_IPS`), and so is the published port (`HOST_PORT`).
+- Batches print as one strip with cut lines by default; each browser remembers if you choose **Cut each label** instead ([#14](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/14)). The choice is also on the **Print a batch** page and carries through to printing ([#15](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/15)).
+- Updated to Python 3.14, FastAPI 0.143, Starlette 1.8, uvicorn 0.54, Authlib 1.8, Pillow 12.3 and httpx 0.28.
+
+### Fixed
+- The saved accent colour was ignored and buttons showed the default blue ([#11](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/11)).
+- Labels printed mirrored and about 1 mm off-centre.
+- The **Print label** button did nothing after an update, because browsers kept an old copy of the page's script. Script and stylesheet links now change with every release.
+- Batches that were meant to print as one strip came out fully cut.
+- The selection bar on the Tags list showed "0 selected" when nothing was ticked.
+
+### Security
+- Failed sign-ins are limited per IP address, and only the reverse proxy may pass on the visitor's IP.
+
+## 30 September 2026
+
+First working version, used internally before release.
+
+### Added
+- Issue asset tags with permanent five-character codes and QR codes, in Standard, Slim, Micro and Loan formats.
+- Print labels from the browser at their real size.
+- Public scan page showing who owns a device and how to contact them.
+- Batches of blank tags for tagging a site, filled in when each one is scanned.
+- Hudu integration: client sync, linking tags to assets, and writing the tag code into the asset.
+- Local accounts with admin and user roles, and optional Microsoft sign-in.

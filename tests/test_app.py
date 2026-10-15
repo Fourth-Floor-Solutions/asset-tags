@@ -359,3 +359,17 @@ def test_version_in_footer_and_endpoint(monkeypatch):
     assert "abc1234" in TestClient(app).get("/login").text
     monkeypatch.setenv("GIT_COMMIT", "not a commit!")
     assert version._commit() == ""
+
+
+def test_batch_cut_choice_carries_to_print_page():
+    from app import main
+    main._login_fails.clear()
+    c = TestClient(app)
+    login(c)
+    assert 'name="cut"' in c.get("/tags/batch").text
+    cid = internal_client_id(c)
+    r = c.post("/tags/batch", data={"client_id": cid, "format": "standard", "count": "2", "cut": "cut"}, follow_redirects=False)
+    assert r.headers["location"].endswith("&cut=cut")
+    assert 'data-initial="cut"' in c.get(r.headers["location"]).text
+    r = c.post("/tags/batch", data={"client_id": cid, "format": "standard", "count": "2"}, follow_redirects=False)
+    assert r.headers["location"].endswith("&cut=strip")

@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import auth, codes, db, hudu, labels, printer, settings, usage, version
+from . import auth, changelog, codes, db, hudu, labels, printer, settings, usage, version
 
 HERE = os.path.dirname(__file__)
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:8080").rstrip("/")
@@ -67,7 +67,7 @@ _VERSIONS = _static_versions()
 templates.env.globals["static"] = lambda name: f"/static/{name}?v={_VERSIONS.get(name, '0')}"
 
 
-SETUP_EXEMPT = ("/setup", "/static/", "/favicon", "/login", "/logout", "/auth/", "/healthz", "/version")
+SETUP_EXEMPT = ("/setup", "/static/", "/favicon", "/login", "/logout", "/auth/", "/healthz", "/version", "/changelog")
 
 
 @app.middleware("http")
@@ -257,6 +257,18 @@ def favicon_svg():
     return Response(svg, media_type="image/svg+xml", headers={"Cache-Control": "public, max-age=300"})
 
 
+@app.get("/changelog", response_class=HTMLResponse)
+def whats_new(request: Request):
+    """What's new: CHANGELOG.md, grouped by date."""
+    try:
+        days = changelog.load()
+        error = None
+    except (OSError, changelog.ChangelogError) as e:
+        days, error = [], str(e)
+    return page(request, "changelog.html", days=days, error=error, types=changelog.TYPES,
+                inline=changelog.inline_html, day_label=changelog.label)
+
+
 @app.get("/version")
 def version_info():
     return {"name": "TagDesk", "version": version.VERSION, "commit": version.COMMIT or None}
@@ -443,7 +455,8 @@ def batch_form(request: Request):
 
 
 @app.post("/tags/batch")
-def batch(request: Request, client_id: int = Form(...), format: str = Form("standard"), count: int = Form(...)):
+def batch(request: Request, client_id: int = Form(...), format: str = Form("standard"), count: int = Form(...),
+          cut: str = Form("strip")):
     user = auth.require_user(request)
     conn = db.connect()
     try:
@@ -455,7 +468,7 @@ def batch(request: Request, client_id: int = Form(...), format: str = Form("stan
         issued = db.issue_tags(conn, count, client_id, format, auth.label(user))
     finally:
         conn.close()
-    return go("/print?codes=" + ",".join(issued) + "&batch=1")
+    return go("/print?codes=" + ",".join(issued) + "&batch=1&cut=" + ("cut" if cut == "cut" else "strip"))
 
 
 # ---------- one tag ----------
@@ -612,7 +625,7 @@ def _print_codes(raw: str) -> list:
 
 
 @app.get("/print", response_class=HTMLResponse)
-def print_sheet(request: Request, batch: str = ""):
+def print_sheet(request: Request, batch: str = "", cut: str = ""):
     auth.require_user(request)
     wanted = _print_codes(request.query_params.get("codes", ""))
     conn = db.connect()
@@ -628,6 +641,7 @@ def print_sheet(request: Request, batch: str = ""):
     names = {x["p"]["id"]: x["p"]["name"] for x in pstats}
     target = {t["code"]: names[pid] for pid, ts in plan.items() for t in ts}
     return page(request, "print.html", items=items, used_formats=used, batch=batch == "1",
+                cut_choice=cut if cut in ("cut", "strip") else "",
                 pstats=pstats, target=target, n_ready=len(target),
                 code_list=",".join(t["code"] for t in tags))
 

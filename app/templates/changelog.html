@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}What's new{% endblock %}
+{% block main %}
+<div class="head"><div>
+  <h1>What's new</h1>
+  <p class="muted">Changes to TagDesk, newest first. You're running <span class="mono">v{{ version }}</span>.</p>
+</div></div>
+{% if error %}<div class="flash bad">The changelog couldn't be read: {{ error }}</div>{% endif %}
+{% for d in days %}
+<section class="card stack changelog-day">
+  <h2>{{ day_label(d.date) }}{% for v in d.versions %} <a class="pill tape" style="background: var(--accent); color: var(--accent-ink)" href="{{ source_url }}/releases/tag/{{ v }}" rel="noopener">{{ v }}</a>{% endfor %}</h2>
+  {% for line in d.intro %}<p>{{ inline(line)|safe }}</p>{% endfor %}
+  {% for name in types if d.sections.get(name) %}
+  <div>
+    <h3>{{ name }}</h3>
+    <ul>{% for item in d.sections[name] %}<li>{{ inline(item)|safe }}</li>{% endfor %}</ul>
+  </div>
+  {% endfor %}
+</section>
+{% endfor %}
+{% endblock %}

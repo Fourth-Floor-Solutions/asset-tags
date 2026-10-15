@@ -27,6 +27,7 @@
   }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }   /* elements that set display (e.g. the selection bar) must still hide */
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); }
 a { color: inherit; }
@@ -167,3 +168,6 @@ select.strip-opt { width: auto; padding: 6px 8px; font-size: 13px; }
 .fmt-table { min-width: 720px; }
 .fmt-table input[type=text] { min-width: 240px; }
 .foot { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 0 28px; font-size: 12px; color: var(--muted); }
+.changelog-day ul { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+.changelog-day h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-family: var(--mono); font-weight: 500; }
+.changelog-day h2 .pill { font-size: 12px; vertical-align: middle; text-decoration: none; }

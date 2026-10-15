@@ -9,6 +9,12 @@
     <div class="field"><label for="count">How many</label><input type="number" id="count" name="count" min="1" max="100" value="10" required></div>
   </div>
   <div class="field"><span class="lbl">Label format</span>{% set sel_format = 'standard' %}{% include "_formats.html" %}</div>
+  <div class="field"><label for="strip-mode">How to cut them</label>
+    <select id="strip-mode" name="cut" class="strip-opt" style="max-width:320px">
+      <option value="strip" selected>One strip, cut them yourself</option>
+      <option value="cut">Cut each label</option>
+    </select>
+    <span class="hint">One strip is easier to carry to a site. You can still change this on the print page.</span></div>
   <div class="actions"><button class="primary" type="submit">Issue and print</button></div>
 </form>
 {% endblock %}

@@ -287,7 +287,7 @@ GIT_COMMIT=$(git rev-parse --short HEAD) docker compose up -d --build
 ```
 
 The running version is also at `/version`. Changes are listed in
-[CHANGELOG.md](CHANGELOG.md).
+[CHANGELOG.md](CHANGELOG.md) and on the app's **What's new** page.
 
 ## Development
 
@@ -297,6 +297,12 @@ cp .env.example .env    # set ADMIN_PASSWORD, PUBLIC_BASE_URL=http://localhost:8
 ./run-dev.sh            # http://localhost:8080 with auto-reload
 .venv/bin/python -m pytest -q
 ```
+
+**Changelog:** add a line for every user-visible change under **today's
+date** in `CHANGELOG.md`, in the same commit. If today's date is already
+there, add to it; never start a second heading for the same day. The tests
+fail on a repeated or out-of-order date. Release notes come from the date's
+section: `python -m scripts.release_notes v0.1.0`.
 
 Layout: `app/main.py` (routes), `labels.py` (label layouts, SVG and 360 dpi
 bitmaps), `printer.py` (Brother raster and SNMP), `usage.py` (tape tracking),
