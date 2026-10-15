@@ -525,6 +525,7 @@ def test_settings_page_title_is_plain():
 
 def test_status_wording_is_about_assignment():
     from app import main
+
     main._login_fails.clear()
     c = TestClient(app)
     login(c)
