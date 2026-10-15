@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Not seen recently{% endblock %}
+{% block main %}
+<div class="head">
+  <div><h1>Not seen recently</h1>
+    <p class="muted">Tags in use that nobody has scanned for a while (in a stocktake, or by opening the tag's QR link while signed in). Find them, or retire the ones that have gone.</p></div>
+  <a class="btn primary" href="/stocktake">Start a stocktake</a>
+</div>
+<form class="filters" method="get" action="/not-seen">
+  <select name="client_id" aria-label="Client"><option value="">All clients</option>{% for c in clients %}<option value="{{ c.id }}" {{ 'selected' if client_id == c.id|string }}>{{ c.name }}</option>{% endfor %}</select>
+  <select name="months" aria-label="Not seen for">{% for n in [3, 6, 12, 24] %}<option value="{{ n }}" {{ 'selected' if months == n }}>Not seen for {{ n }} months</option>{% endfor %}</select>
+  <button class="quiet" type="submit">Show</button>
+</form>
+{% if tags %}
+<div class="tbl"><table>
+  <thead><tr><th>Tag</th><th>Client</th><th>Device</th><th>Serial</th><th>Last seen</th></tr></thead>
+  <tbody>{% for t in tags %}
+  <tr><td class="code"><a href="/tags/{{ t.code }}">{{ t.code }}</a></td><td>{{ t.client_name }}</td><td>{{ t.device_name or '—' }}</td><td class="mono small">{{ t.serial or '—' }}</td>
+    <td class="small">{% if t.last_seen_at %}{{ t.last_seen_at[:10] }}{% if t.last_seen_site %} · {{ t.last_seen_site }}{% endif %}{% else %}<span class="muted">Never (issued {{ t.created_at[:10] }})</span>{% endif %}</td></tr>
+  {% endfor %}</tbody>
+</table></div>
+{% else %}<div class="card"><p>Every tag in use has been seen in the last {{ months }} months.</p></div>{% endif %}
+{% endblock %}

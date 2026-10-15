@@ -184,6 +184,10 @@ def init() -> None:
             # Someone said the label needs replacing: 'damaged', 'missing', 'faded' or 'other'.
             "label_problem": "TEXT NOT NULL DEFAULT ''",
             "label_problem_note": "TEXT NOT NULL DEFAULT ''",
+            # Stocktake: when the tag was last scanned by staff, by whom and where.
+            "last_seen_at": "TEXT",
+            "last_seen_by": "TEXT NOT NULL DEFAULT ''",
+            "last_seen_site": "TEXT NOT NULL DEFAULT ''",
         },
     )
     _add_columns(conn, "cassettes", {"low_logged": "INTEGER NOT NULL DEFAULT 0"})

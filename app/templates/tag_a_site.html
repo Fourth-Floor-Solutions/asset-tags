@@ -1,17 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Tag a site{% endblock %}
+{% block title %}{{ 'Stocktake' if mode == 'stocktake' else 'Tag a site' }}{% endblock %}
 {% block head %}<script src="{{ static('jsQR.js') }}" defer></script><script src="{{ static('site.js') }}" defer></script>{% endblock %}
 {% block main %}
-<div id="site-app" class="site" data-hudu="{{ '1' if hudu_on else '' }}" data-base="{{ public_base }}">
+<div id="site-app" class="site" data-hudu="{{ '1' if hudu_on else '' }}" data-mode="{{ mode }}">
 
   <section id="site-setup" class="card stack">
+    {% if mode == 'stocktake' %}
+    <h1>Stocktake</h1>
+    <p class="muted">Scan every tag you can find at the site. Each one is recorded as seen today. When you finish, you'll see the client's tags that weren't scanned.</p>
+    {% else %}
     <h1>Tag a site</h1>
     <p class="muted">Scan each blank tag with this phone's camera, say which device it's on, save, and scan the next.</p>
+    {% endif %}
     <div class="field"><label for="site-client">Client</label>
       <select id="site-client">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></div>
     <div class="field"><label for="site-name">Site (optional)</label>
       <input type="text" id="site-name" maxlength="80" placeholder="e.g. Head office, 2nd floor"></div>
-    <button class="primary big" type="button" id="site-start">Start tagging</button>
+    <button class="primary big" type="button" id="site-start">{{ 'Start stocktake' if mode == 'stocktake' else 'Start tagging' }}</button>
+    <p class="small">{% if mode == 'stocktake' %}<a href="/tag-a-site">Tag a site instead</a>{% else %}<a href="/stocktake">Do a stocktake instead</a>{% endif %} · <a href="/not-seen">Tags not seen recently</a></p>
   </section>
 
   <section id="site-scan" hidden>
@@ -55,8 +61,16 @@
     </form>
 
 
+    {% if mode == 'stocktake' %}
+    <button class="big" type="button" id="site-finish">Finish stocktake</button>
+    <section class="stack-sm" id="site-unseen-box" hidden>
+      <h2>Not scanned</h2>
+      <p class="muted small">This client's tags in use that weren't scanned in this stocktake. Look for them, or retire the ones that have gone.</p>
+      <ul class="history" id="site-unseen"></ul>
+    </section>
+    {% endif %}
     <section class="stack-sm" id="site-done-box" hidden>
-      <h2>Tagged here</h2>
+      <h2>{{ 'Seen' if mode == 'stocktake' else 'Tagged here' }}</h2>
       <ul class="history" id="site-done"></ul>
       <button class="quiet sm" type="button" id="site-clear">Clear this list</button>
     </section>

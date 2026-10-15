@@ -9,9 +9,10 @@ from urllib.parse import quote
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 
-from .. import changelog, codes, db, labels, settings, version
+from .. import auth, changelog, codes, db, labels, settings, version
 from ..tagops import (
     label_name,
+    mark_seen,
 )
 from ..web import PUBLIC_BASE_URL, go, page, tel_link
 
@@ -147,6 +148,9 @@ def scan(request: Request, raw: str):
         hits.append(now_t)
     with db.connection() as conn:
         tag = db.get_tag(conn, code)
+        if user and tag:
+            # Staff scanning a tag's QR link counts as seeing it (stocktake); not added to the history.
+            mark_seen(conn, code, auth.label(user), log_it=False)
     if user:
         return go(f"/tags/{code}")
     org = settings.get_all()
