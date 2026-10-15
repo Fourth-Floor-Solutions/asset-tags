@@ -13,7 +13,7 @@ from fastapi import Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from . import auth, codes, db, hudu, labels, settings, version
+from . import auth, codes, db, hudu, labels, settings, usage, version
 
 HERE = os.path.dirname(__file__)
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:8080").rstrip("/")
@@ -71,6 +71,7 @@ def page(request: Request, name: str, status_code: int = 200, **ctx):
         # AGPL: users must be able to get the source; set your own link in Settings if you modify it.
         source_url=org["source_url"].rstrip("/"),
         secret_warning=secret_warning(ctx.get("user") or getattr(request.state, "user", None)),
+        tape_warnings=tape_warnings(request),
         version=version.VERSION,
         commit=version.COMMIT,
     )
@@ -135,6 +136,14 @@ def secret_warning(user) -> str:
     if days <= SECRET_WARN_DAYS:
         return f"The Microsoft sign-in client secret expires in {days} day{'s' if days != 1 else ''} ({expires:%d %B %Y}). Create a new one in Entra and enter it in Settings."
     return ""
+
+
+def tape_warnings(request: Request) -> list[dict]:
+    """Low or empty cassettes, for the banner on staff pages (not the public scan page)."""
+    if not getattr(request.state, "user", None):
+        return []
+    with db.connection() as conn:
+        return usage.low_cassettes(conn)
 
 
 def any_printer() -> bool:
