@@ -21,11 +21,13 @@ First public release, under the AGPL-3.0.
 - Sign in with your email address as well as your username.
 - The device name on the public scan page.
 - Version number and build in the footer, and at `/version`.
+- Screenshots and drawn examples of tags on kit in the README, with QR codes you can scan ([#8](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/8)).
 - Set the Hudu API key, Microsoft sign-in (tenant, client ID, client secret and its expiry) and the source-code link in Settings, with **Test** buttons, changes applied without a restart, a warning before the client secret expires, and a log of setting changes. Values in `.env` still work and take priority ([#7](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/7)).
 - This changelog, grouped by date, and a What's new page linked from the footer ([#13](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/13)).
 
 ### Changed
 - Renamed the project from Asset Tags to TagDesk.
+- Tag status reads **Assigned** / **Not assigned** (to a device) instead of "On device" / "Not on device", which read oddly next to **Not printed**; the summary box "Printed, not yet on a device" is now **Not assigned yet**.
 - When Microsoft sign-in is set up, the sign-in page shows only **Sign in with Microsoft**, with the local form behind **Use a local account**.
 - Button text switches between black and white to suit the accent colour.
 - The reverse proxy's address is a setting (`FORWARDED_ALLOW_IPS`), and so is the published port (`HOST_PORT`).
