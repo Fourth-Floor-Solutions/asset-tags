@@ -199,6 +199,6 @@ select.strip-opt { width: auto; padding: 6px 8px; font-size: 13px; }
   width: 14px; height: 14px; border-radius: 2px; background: var(--accent-ink); color: var(--accent); }
 .mtag.t6 b { font-size: 11px; letter-spacing: .08em; }
 .login-card { position: relative; z-index: 1; margin-top: 12vh; box-shadow: 0 10px 40px rgba(0,0,0,.18); }
-.login-foot { position: relative; z-index: 1; text-align: center; background: color-mix(in srgb, var(--bg) 85%, transparent);
-  width: fit-content; margin: 18px auto 0; padding: 6px 12px; border-radius: 6px; }
+.login-src { margin: 4px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); text-align: center; }
+.login-src a { color: inherit; }
 @media (prefers-reduced-motion: reduce) { .stream-track { animation: none; } }

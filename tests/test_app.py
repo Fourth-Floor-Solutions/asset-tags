@@ -380,4 +380,6 @@ def test_login_page_tag_streams_and_no_version():
     html = TestClient(app).get("/login").text
     assert 'class="tag-streams" aria-hidden="true"' in html and html.count('class="mtag ') >= 100
     assert all(f'class="mtag {s}"' in html for s in ("t18", "t12", "t6"))     # a mix of tape sizes
-    assert f"v{__version__}" not in html and "source code" in html
+    assert f"v{__version__}" not in html and 'class="foot' not in html
+    card = html[html.index('class="card narrow login-card"'):]
+    assert 'class="login-src"' in card and "source code" in card                  # AGPL link inside the card

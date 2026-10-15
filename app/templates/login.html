@@ -37,9 +37,8 @@
   {% else %}
   {{ local_form }}
   {% endif %}
+  {# The AGPL source link lives in the card; the sign-in page has no separate footer. #}
+  <p class="login-src"><a href="{{ source_url }}" rel="noopener">TagDesk</a> is free software · <a href="{{ source_url }}" rel="noopener">source code</a></p>
 </div>
 {% endblock %}
-{% block footer %}
-{# No version here; the AGPL source link stays. #}
-<footer class="foot login-foot">{{ org.org_name }} · <a href="{{ source_url }}" rel="noopener">TagDesk</a> is free software · <a href="{{ source_url }}" rel="noopener">source code</a></footer>
-{% endblock %}
+{% block footer %}{% endblock %}
