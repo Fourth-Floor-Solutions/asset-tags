@@ -27,7 +27,9 @@ class ChangelogError(ValueError):
 
 def parse(text: str) -> list:
     """[{date, versions, intro, sections: {type: [items]}}], in file order."""
-    days, current, section = [], None, None
+    days: list[dict] = []
+    current: dict | None = None
+    section: list[str] | None = None
     for n, line in enumerate(text.splitlines(), 1):
         if line.startswith("## "):
             m = _DATE.match(line)

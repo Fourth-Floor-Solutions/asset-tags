@@ -16,7 +16,7 @@ from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import auth, db, labels, settings
+from . import auth, db, labels, log, settings
 from .routes import clients, login, printing, public, tags, users
 from .routes import settings as settings_routes
 from .web import HERE, PUBLIC_BASE_URL, page
@@ -35,6 +35,7 @@ def _session_secret() -> str:
         return f.read().strip()
 
 
+log.setup()
 db.init()
 auth.seed_admin()
 labels.apply_overrides(settings.formats())

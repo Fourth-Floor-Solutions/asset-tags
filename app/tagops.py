@@ -2,19 +2,21 @@
 
 from __future__ import annotations
 
-from . import db, hudu, labels, printer, settings, usage
+from . import db, hudu, labels, log, printer, settings, usage
 from .web import PUBLIC_BASE_URL
+
+_log = log.get("hudu")
 
 MAX_BATCH = 100
 MAX_PRINT = 200
 
 
-def label_name(tag, org: dict = None) -> str:
+def label_name(tag, org: dict | None = None) -> str:
     org = org or settings.get_all()
     return org["org_short"] if tag["format"] == "loan" else tag["client_label"]
 
 
-def label_text(org: dict = None) -> dict:
+def label_text(org: dict | None = None) -> dict:
     return settings.label_text(org or settings.get_all())
 
 
@@ -26,7 +28,7 @@ def needs_reprint(tag) -> bool:
     return bool(tag["printed_as"]) and tag["printed_as"] != printed_as(tag)
 
 
-def svg_for(tag, org: dict = None) -> str:
+def svg_for(tag, org: dict | None = None) -> str:
     org = org or settings.get_all()
     return labels.render(tag["format"], tag["code"], label_name(tag, org), PUBLIC_BASE_URL, text=label_text(org))
 
@@ -66,6 +68,7 @@ def hudu_sync(conn, code: str, actor: str, force: bool = False) -> str | None:
     except hudu.HuduError as e:
         error = str(e)
         notes.append(f"error: {error}")
+        _log.warning("writing tag %s to Hudu failed: %s", code, error)
     status = "; ".join(notes) or "nothing to do"
     if error:
         status = "error: " + error
@@ -84,7 +87,7 @@ def clients(conn, include_inactive: bool = False):
     return conn.execute(sql + " ORDER BY is_internal DESC, name COLLATE NOCASE").fetchall()
 
 
-def check_format(conn, client_id: int, fmt: str, current_format: str = None) -> str | None:
+def check_format(conn, client_id: int, fmt: str, current_format: str | None = None) -> str | None:
     if fmt not in labels.FORMATS:
         return "Choose a label format."
     if not labels.FORMATS[fmt].get("enabled", True) and fmt != current_format:

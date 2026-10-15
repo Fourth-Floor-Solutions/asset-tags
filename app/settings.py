@@ -20,7 +20,9 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 
-from . import db
+from . import db, log
+
+_log = log.get("settings")
 
 DEFAULTS = {
     "org_name": "Your organisation",
@@ -250,6 +252,7 @@ def save_secret(key: str, value) -> None:
 
 
 def audit(actor: str, setting: str, change: str = "") -> None:
+    _log.info("%s changed by %s%s", setting, actor, f": {change[:300]}" if change else "")
     with db.connection() as conn:
         conn.execute(
             "INSERT INTO audit(at, actor, setting, change) VALUES(?,?,?,?)", (db.now(), actor, setting, change[:300])

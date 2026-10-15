@@ -11,6 +11,7 @@ from __future__ import annotations
 import copy
 import os
 from html import escape
+from typing import Any
 
 import segno
 
@@ -28,7 +29,7 @@ TAPE_FILLS = {
     "any": "#fbfbf8",
 }
 
-FORMATS = {
+FORMATS: dict[str, dict[str, Any]] = {
     "standard": {
         "name": "Standard",
         "width": 48,
@@ -121,7 +122,7 @@ def default_text() -> dict:
     return settings.label_text(dict(settings.DEFAULTS))
 
 
-def layout(fmt: str, code: str, client_name: str, text: dict = None) -> list:
+def layout(fmt: str, code: str, client_name: str, text: dict | None = None) -> list:
     """The label as a list of drawing elements, in mm. `fill` is "ink" or "tape".
 
     `text` is the organisation's wording (settings.label_text): the "managed
@@ -195,7 +196,9 @@ def _qr_path(data: str, x: float, y: float, size: float) -> str:
     return f'<path d="{"".join(parts)}" fill="{INK}" shape-rendering="crispEdges"/>'
 
 
-def render(fmt: str, code: str, client_name: str, base_url: str, css_class: str = "label", text: dict = None) -> str:
+def render(
+    fmt: str, code: str, client_name: str, base_url: str, css_class: str = "label", text: dict | None = None
+) -> str:
     spec = FORMATS[fmt]
     w, h = spec["width"], spec["height"]
     tape = fill(fmt)
@@ -251,7 +254,10 @@ def _font(name: str, px: int):
             # Archivo ships as a variable font: pick its weight (and normal width).
             axes = f.get_variation_axes()
             f.set_variation_by_axes(
-                [weight if a.get("name", b"") in (b"Weight", "Weight") else a["default"] for a in axes]
+                [
+                    float(weight) if a.get("name", b"") in (b"Weight", "Weight") else float(a["default"] or 0)
+                    for a in axes
+                ]
             )
         except OSError:
             pass
@@ -280,12 +286,12 @@ def _text_image(el: dict):
         d.text((0, ascent), el["body"], font=font, fill=255, anchor="ls")
     maxw = el.get("maxw")
     if maxw and natural > maxw * DOTS_PER_MM:
-        img = img.resize((max(1, round(maxw * DOTS_PER_MM)), img.height), Image.LANCZOS)
+        img = img.resize((max(1, round(maxw * DOTS_PER_MM)), img.height), Image.Resampling.LANCZOS)
         natural = maxw * DOTS_PER_MM
     return img, ascent, natural
 
 
-def raster(fmt: str, code: str, client_name: str, base_url: str, text: dict = None):
+def raster(fmt: str, code: str, client_name: str, base_url: str, text: dict | None = None):
     """1-bit image of the whole label at 360 dpi (black = ink), full tape height."""
     from PIL import Image, ImageDraw
 

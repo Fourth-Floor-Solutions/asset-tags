@@ -5,13 +5,14 @@ from __future__ import annotations
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 
-from .. import auth, db, hudu
+from .. import auth, db, hudu, log
 from ..tagops import (
     hudu_needs_sync,
 )
 from ..web import clean, flash, go, page
 
 router = APIRouter()
+_log = log.get("hudu")
 
 
 @router.get("/clients", response_class=HTMLResponse)
@@ -32,6 +33,7 @@ def clients_sync(request: Request):
     try:
         companies = hudu.list_companies()
     except hudu.HuduError as e:
+        _log.warning("client sync from Hudu failed: %s", e)
         flash(request, str(e), "bad")
         return go("/clients")
     added = renamed = 0
@@ -54,6 +56,7 @@ def clients_sync(request: Request):
                     (hid, name, (co.get("nickname") or name).strip()[:40], 0, 1, db.now()),
                 )
                 added += 1
+    _log.info("client sync from Hudu: %d companies, %d added, %d renamed", len(companies), added, renamed)
     flash(
         request,
         f"Synced {len(companies)} Hudu companies: {added} added, {renamed} renamed. "

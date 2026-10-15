@@ -23,6 +23,7 @@ First public release, under the AGPL-3.0.
 - Version number and build in the footer, and at `/version`.
 - Screenshots and drawn examples of tags on kit in the README, with QR codes you can scan ([#8](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/8)).
 - Set the Hudu API key, Microsoft sign-in (tenant, client ID, client secret and its expiry) and the source-code link in Settings, with **Test** buttons, changes applied without a restart, a warning before the client secret expires, and a log of setting changes. Values in `.env` still work and take priority ([#7](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/7)).
+- An application log (`docker compose logs`): sign-ins, tag events, settings changes, and printer, Hudu and Microsoft sign-in failures. Passwords and secrets are never logged. Set the level with `LOG_LEVEL` ([#10](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/10)).
 - This changelog, grouped by date, and a What's new page linked from the footer ([#13](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/13)).
 
 ### Changed

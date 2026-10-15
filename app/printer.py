@@ -282,7 +282,8 @@ def join_strip(images: list) -> list:
     """
     from PIL import Image, ImageDraw
 
-    strips, current = [], []
+    strips: list = []
+    current: list = []
     for img in images:
         if current and sum(i.width for i in current) + img.width > MAX_PAGE_DOTS:
             strips.append(current)
@@ -405,7 +406,8 @@ def route(tags: list, printers: list) -> tuple:
 
     Returns ({printer id: [tags]}, [tags no printer can take right now]).
     """
-    plan, waiting = {}, []
+    plan: dict[int, list] = {}
+    waiting: list = []
     for t in tags:
         target = next((x for x in printers if x["st"] and check_tape(x["st"], t["format"]) is None), None)
         if target:

@@ -21,6 +21,15 @@ ignore = [
 [tool.ruff.lint.isort]
 known-first-party = ["app", "scripts", "tests"]
 
+[tool.mypy]
+python_version = "3.14"
+files = ["app"]
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["authlib.*", "segno.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q -p no:cacheprovider"

@@ -80,7 +80,7 @@ def settings_test_sso(request: Request):
     return go("/settings#integrations")
 
 
-def _settings_page(request: Request, setup: bool, error: str = "", form: dict = None):
+def _settings_page(request: Request, setup: bool, error: str = "", form: dict | None = None):
     with db.connection() as conn:
         cl = clients(conn)
         internal = conn.execute("SELECT id FROM clients WHERE is_internal = 1 LIMIT 1").fetchone()
@@ -127,7 +127,8 @@ def settings_page(request: Request):
 @router.post("/settings")
 async def settings_save(request: Request):
     user = auth.require_admin(request)
-    data = await request.form()
+    # Text fields only: this form has no file uploads.
+    data = {k: v for k, v in (await request.form()).items() if isinstance(v, str)}
     setup = data.get("setup") == "1"
     before = settings.get_all()
     # Fields not on the form keep their current value; values set in .env are never copied in.

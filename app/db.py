@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import secrets
 import sqlite3
@@ -10,6 +11,8 @@ from contextlib import contextmanager
 from datetime import UTC, datetime
 
 from . import codes
+
+_log = logging.getLogger("tagdesk.tags")  # app.log names its loggers "tagdesk.<area>"
 
 DATA_DIR = os.environ.get("DATA_DIR", os.path.join(os.path.dirname(__file__), "..", "data"))
 DB_PATH = os.path.join(DATA_DIR, "tagdesk.db")
@@ -202,6 +205,7 @@ def log(conn, code: str, actor: str, action: str, detail: str = "") -> None:
         "INSERT INTO events(code, at, actor, action, detail) VALUES(?,?,?,?,?)",
         (code, now(), actor, action, detail),
     )
+    _log.info("%s %s by %s%s", code, action, actor, f": {detail}" if detail else "")
 
 
 def issue_tags(conn, count: int, client_id: int, fmt: str, actor: str, fields: dict | None = None) -> list:
@@ -212,7 +216,7 @@ def issue_tags(conn, count: int, client_id: int, fmt: str, actor: str, fields: d
     )
     conn.execute("BEGIN IMMEDIATE")
     try:
-        start = int(get_setting(conn, "next_num"))
+        start = int(get_setting(conn, "next_num") or 0)
         if start + count > codes.SPACE:
             raise RuntimeError("code space exhausted")
         out = []
