@@ -5,10 +5,10 @@ from __future__ import annotations
 import os
 import re
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, Response
 
-from .. import auth, backup, db, hudu, labels, printer, secretbox, settings
+from .. import apikeys, auth, backup, db, hudu, labels, printer, secretbox, settings
 from ..tagops import (
     clients,
     label_text,
@@ -104,9 +104,43 @@ def _settings_page(request: Request, setup: bool, error: str = "", form: dict | 
         secrets={k: settings.secret_info(k) for k in settings.SECRET_KEYS},
         audit=settings.recent_audit(),
         backups=backup.list_daily(),
+        api_keys=_api_keys(),
+        api_scopes=apikeys.SCOPES,
         backup_keep=backup.keep(),
         key_in_env=bool(os.environ.get("TAGDESK_SECRET_KEY", "").strip()),
     )
+
+
+def _api_keys() -> list:
+    with db.connection() as conn:
+        return apikeys.all_keys(conn)
+
+
+@router.post("/settings/api-keys", response_class=HTMLResponse)
+def api_key_create(request: Request, name: str = Form(""), scope: str = Form("read")):
+    user = auth.require_admin(request)
+    name = clean(name, 60)
+    if not name or scope not in apikeys.SCOPES:
+        flash(request, "Give the key a name and choose what it can do.", "bad")
+        return go("/settings#api-keys")
+    with db.connection() as conn:
+        key = apikeys.create(conn, name, scope, auth.label(user))
+    settings.audit(auth.label(user), "api key", f"created {name!r} ({apikeys.SCOPES[scope].lower()})")
+    # Shown on this page only, never stored or put in the session.
+    return page(request, "api_key_created.html", key_name=name, scope=apikeys.SCOPES[scope], key=key)
+
+
+@router.post("/settings/api-keys/{key_id}/revoke")
+def api_key_revoke(request: Request, key_id: int):
+    user = auth.require_admin(request)
+    with db.connection() as conn:
+        row = conn.execute("SELECT name FROM api_keys WHERE id=?", (key_id,)).fetchone()
+        if row:
+            apikeys.revoke(conn, key_id)
+    if row:
+        settings.audit(auth.label(user), "api key", f"revoked {row['name']!r}")
+        flash(request, f"Revoked {row['name']}. It stops working immediately.")
+    return go("/settings#api-keys")
 
 
 @router.get("/settings/backup/tagdesk.db")

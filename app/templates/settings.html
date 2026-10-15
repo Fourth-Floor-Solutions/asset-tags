@@ -141,6 +141,25 @@
   <div class="actions"><button class="primary" type="submit">{{ 'Save and continue' if setup else 'Save settings' }}</button></div>
 </form>
 {% if not setup %}
+<div class="card stack" id="api-keys" style="margin-top:20px">
+  <h2>API keys</h2>
+  <p class="muted small">For other systems (an RMM, a PSA automation, scripts) to look up and update tags. See <a href="{{ source_url }}/blob/main/docs/API.md" rel="noopener">the API reference</a>. A key is shown once when it's created.</p>
+  {% if api_keys %}
+  <div class="tbl"><table>
+    <thead><tr><th>Name</th><th>Can</th><th>Key</th><th>Created</th><th>Last used</th><th></th></tr></thead>
+    <tbody>{% for k in api_keys %}
+    <tr{% if k.revoked_at %} class="muted"{% endif %}><td>{{ k.name }}</td><td>{{ api_scopes[k.scope] }}</td><td class="mono small">{{ k.prefix }}…</td>
+      <td class="small">{{ k.created_at[:10] }} by {{ k.created_by }}</td><td class="small">{{ k.last_used_at[:16]|replace('T', ' ') ~ ' UTC' if k.last_used_at else 'Never' }}</td>
+      <td>{% if k.revoked_at %}<span class="pill retired">Revoked</span>{% else %}<form method="post" action="/settings/api-keys/{{ k.id }}/revoke"><button class="danger sm" type="submit">Revoke</button></form>{% endif %}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% endif %}
+  <form class="filters" method="post" action="/settings/api-keys">
+    <input type="text" name="name" maxlength="60" placeholder="Name, e.g. RMM sync" aria-label="Key name" required style="max-width:260px">
+    <select name="scope" aria-label="What the key can do">{% for k, v in api_scopes.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select>
+    <button type="submit">Create key</button>
+  </form>
+</div>
 <div class="card stack" id="backup" style="margin-top:20px">
   <h2>Backup</h2>
   <p class="muted small">Everything (tags, clients, users, printers, settings and history) is in one database file. Saved secrets in it are encrypted with a separate key, so keep a copy of the key too{% if key_in_env %} (here it's <code>TAGDESK_SECRET_KEY</code> in the server's <code>.env</code>){% endif %}. To restore, stop TagDesk, put the files back in the data folder as <code>tagdesk.db</code>{% if not key_in_env %} and <code>secret.key</code>{% endif %}, and start it again.</p>

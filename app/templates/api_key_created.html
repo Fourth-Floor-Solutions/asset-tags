@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}API key created{% endblock %}
+{% block main %}
+<div class="card stack narrow-card">
+  <h1>API key created</h1>
+  <p><b>{{ key_name }}</b> · {{ scope }}</p>
+  <p>Copy this key now. It won't be shown again; if it's lost, revoke it and create a new one.</p>
+  <input type="text" readonly value="{{ key }}" aria-label="The new API key" class="mono" onclick="this.select()">
+  <p class="small muted">Send it as <code>Authorization: Bearer &lt;key&gt;</code>. Keep it secret, like a password.</p>
+  <div class="actions"><a class="btn primary" href="/settings#api-keys">Done</a></div>
+</div>
+{% endblock %}

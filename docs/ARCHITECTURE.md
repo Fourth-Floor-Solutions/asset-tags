@@ -19,6 +19,8 @@ database, server-rendered Jinja templates and a little plain JavaScript.
 | `app/auth.py` | Local accounts and Microsoft (Entra ID) sign-in. |
 | `app/db.py`, `app/codes.py` | SQLite schema and migrations; tag codes. |
 | `app/log.py` | The application log. |
+| `app/apikeys.py`, `app/routes/api.py` | API keys and the JSON API under `/api/v1` ([API.md](API.md)). |
+| `app/coverage.py`, `app/hudu_archive.py`, `app/backup.py` | Tag coverage, the Hudu archive check, and backups. |
 
 The scan route `/{raw}` matches any single path segment, so the `public`
 router is included last.

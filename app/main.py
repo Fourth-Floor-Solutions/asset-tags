@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from . import auth, backup, db, hudu, hudu_archive, labels, log, settings
-from .routes import clients, coverage, login, printing, public, tags, users
+from .routes import api, clients, coverage, login, printing, public, tags, users
 from .routes import settings as settings_routes
 from .web import HERE, PUBLIC_BASE_URL, page
 
@@ -132,6 +132,11 @@ async def _login_required(request: Request, exc):
     return RedirectResponse(f"/login?next={quote(request.url.path)}", status_code=303)
 
 
+@app.exception_handler(api.ApiError)
+async def _api_error(request: Request, exc):
+    return api.error_response(exc)
+
+
 @app.exception_handler(hudu.HuduOff)
 async def _hudu_off(request: Request, exc):
     """Hudu features are only available while Hudu is set up."""
@@ -152,6 +157,7 @@ app.include_router(login.router)
 app.include_router(tags.router)
 app.include_router(printing.router)
 app.include_router(settings_routes.router)
+app.include_router(api.router)
 app.include_router(clients.router)
 app.include_router(coverage.router)
 app.include_router(users.router)

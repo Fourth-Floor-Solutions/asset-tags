@@ -90,6 +90,19 @@ CREATE TABLE IF NOT EXISTS coverage (
   error TEXT NOT NULL DEFAULT ''
 );
 
+-- API keys: only a hash of each key is kept (see app/apikeys.py).
+CREATE TABLE IF NOT EXISTS api_keys (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  scope TEXT NOT NULL,                     -- read | write
+  key_hash TEXT NOT NULL UNIQUE,
+  prefix TEXT NOT NULL,                    -- first characters, to tell keys apart
+  created_by TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  last_used_at TEXT,
+  revoked_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS audit (
   id INTEGER PRIMARY KEY,
   at TEXT NOT NULL,
