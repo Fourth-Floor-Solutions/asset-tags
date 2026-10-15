@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import os
 import secrets
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from urllib.parse import quote, urlparse
 
 from fastapi import FastAPI, Request
@@ -16,7 +18,7 @@ from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import auth, db, labels, log, settings
+from . import auth, db, hudu_archive, labels, log, settings
 from .routes import clients, login, printing, public, tags, users
 from .routes import settings as settings_routes
 from .web import HERE, PUBLIC_BASE_URL, page
@@ -40,7 +42,15 @@ db.init()
 auth.seed_admin()
 labels.apply_overrides(settings.formats())
 
-app = FastAPI(title="TagDesk", docs_url=None, redoc_url=None, openapi_url=None)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    hudu_archive.start()  # background check for devices archived in Hudu
+    yield
+    hudu_archive.stop()
+
+
+app = FastAPI(title="TagDesk", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=os.path.join(HERE, "static")), name="static")
 
 SETUP_EXEMPT = ("/setup", "/static/", "/favicon", "/login", "/logout", "/auth/", "/healthz", "/version", "/changelog")

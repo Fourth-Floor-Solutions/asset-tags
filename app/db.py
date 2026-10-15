@@ -157,6 +157,9 @@ def init() -> None:
             "hudu_pushed_asset_id": "INTEGER",  # asset whose Asset Tag field holds this code
             "hudu_sync_status": "TEXT NOT NULL DEFAULT ''",
             "hudu_sync_at": "TEXT",
+            # From the archive check: '' (fine), 'archived', 'missing' or 'unarchived'.
+            "hudu_state": "TEXT NOT NULL DEFAULT ''",
+            "hudu_state_at": "TEXT",
         },
     )
     _migrate_printer(conn)
