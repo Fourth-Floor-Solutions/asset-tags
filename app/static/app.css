@@ -249,3 +249,5 @@ button.linklike:focus-visible { outline: 2px solid currentColor; outline-offset:
 .checks { display: flex; flex-wrap: wrap; gap: 8px 18px; }
 .checks label { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; }
 .stack-sm { display: grid; gap: 10px; }
+
+.narrow-card { max-width: 640px; }

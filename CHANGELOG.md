@@ -4,9 +4,10 @@ What changed in TagDesk, newest first. Everything that changed on the same
 day is listed under that one date, with any versions released that day in
 the heading. Versions follow [semantic versioning](https://semver.org).
 
-## 16 October 2026 · v0.2.0, v0.3.0, v0.4.0, v0.5.0, v0.6.0, v0.7.0, v0.8.0
+## 16 October 2026 · v0.2.0, v0.3.0, v0.4.0, v0.5.0, v0.6.0, v0.7.0, v0.8.0, v0.9.0
 
 ### Added
+- **API keys** (Settings): read-only or read/write keys for other systems to look up tags (by code, serial, client, status or Hudu asset), update their device details and Hudu link, and retire them. Keys are shown once and stored only as a hash; changes show in the tag's history under the key's name. See [docs/API.md](https://github.com/Fourth-Floor-Solutions/tagdesk/blob/main/docs/API.md) ([#42](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/42)).
 - **Backup** in Settings: download a consistent copy of the database while TagDesk is running, and the key that decrypts saved secrets. A copy is also kept every day in the data folder's `backups/` (the newest 7; `BACKUP_KEEP`). Restoring is described in the README ([#41](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/41)).
 - A warning on every staff page when a printer's loaded cassette is low (about 1 m left) or out, until a new cassette is fitted, and a line in the log when it first goes low ([#40](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/40)).
 - Typing a serial number on a tag suggests the client's Hudu asset with that serial (**Link it**), ignoring case, spaces and dashes. It never links on its own ([#38](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/38)).
