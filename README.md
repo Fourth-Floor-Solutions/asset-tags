@@ -25,6 +25,37 @@ works just as well for a single organisation tagging its own equipment.
   user roles.
 - **One small container:** Python (FastAPI) and SQLite, no other services.
 
+## Screenshots
+
+All screenshots and examples use made-up demo data.
+
+![The Tags list: tags for one client, with their device, model, serial, label format and whether each is assigned and printed](docs/screenshots/tags.webp)
+
+### Tags on kit
+
+Drawn examples of real TagDesk labels. **Scan any QR code with your phone**
+to see the page someone gets when they scan a tag without signing in.
+
+![A Slim 12 mm tag on the front panel of a 1U gateway, with an enlarged view of the label](docs/screenshots/device-gateway.png)
+
+![A Slim 12 mm tag stuck upright beside the SFP cages of a 48-port switch, with an enlarged view of the label](docs/screenshots/device-switch.png)
+
+![A Standard 18 mm tag near the rim of a ceiling access point, with an enlarged view of the label](docs/screenshots/device-ap.png)
+
+![Six tags for one client printed as a single strip with dashed cut lines between them](docs/screenshots/strip-batch.png)
+
+### What a scan shows
+
+<img src="docs/screenshots/scan-ap.png" width="300" alt="The public scan page on a phone: the tag code, the device name, who owns it, and the support phone number and email">
+
+### In the app
+
+| | |
+|---|---|
+| ![A tag's page: label preview, device details, Hudu link and history](docs/screenshots/tag.webp) | ![Tag a device: client, label format, device details and Hudu asset search](docs/screenshots/tag-a-device.webp) |
+| ![A batch on the print page, set to print as one strip with cut lines](docs/screenshots/print-batch.webp) | ![Settings: organisation details, support contact and label wording](docs/screenshots/settings.webp) |
+| ![The sign-in page, with drifting tags in the accent colour behind the card](docs/screenshots/sign-in.webp) | |
+
 ## Requirements
 
 - Docker with the Compose plugin.
