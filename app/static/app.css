@@ -173,10 +173,11 @@ select.strip-opt { width: auto; padding: 6px 8px; font-size: 13px; }
 .changelog-day h2 .pill { font-size: 12px; vertical-align: middle; text-decoration: none; }
 
 /* ---------- sign-in page: streams of tags in the accent colour ---------- */
-.tag-streams { position: fixed; inset: -20vh -20vw; z-index: 0; overflow: hidden; pointer-events: none;
+.tag-streams { position: fixed; inset: -25vh -40vw; z-index: 0; overflow: hidden; pointer-events: none;
   display: flex; flex-direction: column; justify-content: center; gap: 18px; transform: rotate(-9deg); }
 .stream { opacity: var(--fade); }
-.stream-track { display: flex; gap: 14px; width: max-content; animation: tag-drift var(--speed) linear infinite; animation-direction: var(--dir); }
+.stream-track { display: flex; gap: 14px; width: max-content; animation: tag-drift var(--speed) linear infinite;
+  animation-direction: var(--dir); animation-delay: var(--delay, 0s); }
 @keyframes tag-drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .stream-track { align-items: center; }
 /* Three tape widths in proportion: 18 mm Standard, 12 mm Slim, 6 mm Micro. */
@@ -202,3 +203,8 @@ select.strip-opt { width: auto; padding: 6px 8px; font-size: 13px; }
 .login-src { margin: 4px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); text-align: center; }
 .login-src a { color: inherit; }
 @media (prefers-reduced-motion: reduce) { .stream-track { animation: none; } }
+/* Signed-in pages: the same tags, still and faint, behind everything. */
+.tag-streams.static { opacity: .16; }
+.tag-streams.static .stream-track { animation: none; transform: translateX(-12%); }
+@media (prefers-color-scheme: dark) { .tag-streams.static { opacity: .10; } }
+.top, main, .foot { position: relative; z-index: 1; }

@@ -32,6 +32,7 @@
   </div>
 </header>
 {% endif %}
+{% if bg_streams %}{% set streams = bg_streams %}{% set animated = false %}{% include "_tag_streams.html" %}{% endif %}
 <main>
   {% if flash %}<div class="flash {{ flash.kind }}" role="status">{{ flash.text }}</div>{% endif %}
   {% block main %}{% endblock %}

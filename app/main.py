@@ -104,7 +104,7 @@ async def _forbidden(request: Request, exc):
 
 # ---------- helpers ----------
 
-def tag_streams(rows: int = 16, per_row: int = 12) -> list:
+def tag_streams(rows: int = 16, per_row: int = 40) -> list:
     """Random-looking tag codes for the sign-in page's decorative background."""
     import random
 
@@ -115,6 +115,9 @@ def tag_streams(rows: int = 16, per_row: int = 12) -> list:
 def page(request: Request, name: str, status_code: int = 200, **ctx):
     if name == "login.html":
         ctx.setdefault("streams", tag_streams())
+    elif getattr(request.state, "user", None):
+        # Signed-in pages get a faint, still version of the sign-in background.
+        ctx.setdefault("bg_streams", tag_streams(rows=16, per_row=36))
     org = ctx.pop("org", None) or settings.get_all()
     ctx.update(
         request=request,

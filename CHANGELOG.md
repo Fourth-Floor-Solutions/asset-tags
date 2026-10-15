@@ -28,7 +28,7 @@ First public release, under the AGPL-3.0.
 - When Microsoft sign-in is set up, the sign-in page shows only **Sign in with Microsoft**, with the local form behind **Use a local account**.
 - Button text switches between black and white to suit the accent colour.
 - The reverse proxy's address is a setting (`FORWARDED_ALLOW_IPS`), and so is the published port (`HOST_PORT`).
-- The sign-in page has a background of drifting asset tags (a mix of 18, 12 and 6 mm sizes) in your accent colour, and no longer shows the version or a separate footer ([#16](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/16)).
+- The sign-in page has a background of drifting asset tags (a mix of 18, 12 and 6 mm sizes) in your accent colour, and no longer shows the version or a separate footer. Signed-in pages show a faint, still version of the same background ([#16](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/16)).
 - Batches print as one strip with cut lines by default; each browser remembers if you choose **Cut each label** instead ([#14](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/14)). The choice is also on the **Print a batch** page and carries through to printing ([#15](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/15)).
 - Updated to Python 3.14, FastAPI 0.143, Starlette 1.8, uvicorn 0.54, Authlib 1.8, Pillow 12.3 and httpx 0.28.
 

@@ -383,3 +383,14 @@ def test_login_page_tag_streams_and_no_version():
     assert f"v{__version__}" not in html and 'class="foot' not in html
     card = html[html.index('class="card narrow login-card"'):]
     assert 'class="login-src"' in card and "source code" in card                  # AGPL link inside the card
+
+
+def test_static_tag_background_only_when_signed_in():
+    from app import main
+    main._login_fails.clear()
+    anon = TestClient(app).get("/ZZZZZ").text                  # public scan page, signed out
+    assert "tag-streams" not in anon
+    c = TestClient(app)
+    login(c)
+    html = c.get("/").text
+    assert 'class="tag-streams static"' in html and "--speed" not in html

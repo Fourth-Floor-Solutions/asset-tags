@@ -1,0 +1,18 @@
+{# Decorative rows of asset tags in the accent colour (sizes mixed like real 18/12/6 mm tape).
+   animated: the sign-in page, rows drift in alternating directions.
+   static: a faint, still version behind the signed-in pages. #}
+<div class="tag-streams{{ ' static' if not animated }}" aria-hidden="true">
+  {% for row in streams %}{% set row_offset = loop.index0 * 3 %}
+  {% set speed = 300 + (loop.index * 37) % 120 %}
+  {# A negative delay starts each row part-way through its loop, so the page is full from the first frame. #}
+  <div class="stream" style="{% if animated %}--speed: {{ speed }}s; --delay: -{{ (loop.index * 53) % speed }}s; --dir: {{ 'normal' if loop.index is odd else 'reverse' }}; {% endif %}--fade: {{ [0.35, 0.55, 0.8, 0.5, 0.65][loop.index % 5] }}">
+    <div class="stream-track">
+      {% for pass in range(2 if animated else 1) %}{% for code in row %}{% set size = ['t18', 't12', 't18', 't6', 't12', 't6', 't18'][(loop.index0 + row_offset) % 7] %}
+      {%- if size == 't18' -%}<span class="mtag t18"><i class="mqr"></i><span class="mtxt"><em></em><b>{{ code }}</b><em class="thin"></em></span></span>
+      {%- elif size == 't12' -%}<span class="mtag t12"><i class="mqr"></i><b>{{ code }}</b></span>
+      {%- else -%}<span class="mtag t6"><i class="mmark">{{ org.org_mark }}</i><b>{{ code }}</b></span>{%- endif %}
+      {%- endfor %}{% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
