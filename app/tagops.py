@@ -28,6 +28,34 @@ def needs_reprint(tag) -> bool:
     return bool(tag["printed_as"]) and tag["printed_as"] != printed_as(tag)
 
 
+LABEL_PROBLEMS = {
+    "damaged": "Label damaged",
+    "missing": "Label missing",
+    "faded": "Label faded or hard to scan",
+    "other": "Label needs replacing",
+}
+
+
+def reprint_reasons(tag) -> list[str]:
+    """Why a tag needs a new label: reported problems and printed details that no longer match."""
+    if tag["status"] == "retired":
+        return []
+    why = []
+    if tag["label_problem"]:
+        why.append(LABEL_PROBLEMS.get(tag["label_problem"], "Label needs replacing"))
+    if needs_reprint(tag):
+        why.append("Client, label name or format changed since printing")
+    return why
+
+
+def reprint_queue(conn) -> list:
+    rows = conn.execute(
+        db.TAG_SELECT + " WHERE t.status != 'retired' AND (t.label_problem != '' OR t.printed_as IS NOT NULL) "
+        "ORDER BY c.name COLLATE NOCASE, t.code"
+    ).fetchall()
+    return [r for r in rows if reprint_reasons(r)]
+
+
 def svg_for(tag, org: dict | None = None) -> str:
     org = org or settings.get_all()
     return labels.render(tag["format"], tag["code"], label_name(tag, org), PUBLIC_BASE_URL, text=label_text(org))
@@ -106,7 +134,8 @@ def check_format(conn, client_id: int, fmt: str, current_format: str | None = No
 def record_printed(conn, tags: list, actor: str, how: str) -> int:
     for tag in tags:
         conn.execute(
-            "UPDATE tags SET printed_count = printed_count + 1, printed_at = ?, printed_as = ? WHERE code = ?",
+            "UPDATE tags SET printed_count = printed_count + 1, printed_at = ?, printed_as = ?, "
+            "label_problem = '', label_problem_note = '' WHERE code = ?",
             (db.now(), printed_as(tag), tag["code"]),
         )
         db.log(conn, tag["code"], actor, "printed", f"{labels.FORMATS[tag['format']]['name']} · {how}")

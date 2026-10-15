@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Reprint{% endblock %}
+{% block main %}
+<div class="head">
+  <div><h1>Reprint</h1>
+    <p class="muted">Tags that need a new label: reported damaged, missing or faded, or printed before their client, label name or format changed. Printing a tag takes it off the list.</p></div>
+  {% if tags %}<div class="actions">
+    {% if printer_on %}
+    <select id="strip-mode" class="strip-opt" aria-label="How to cut the labels"><option value="strip">One strip, cut them yourself</option><option value="cut">Cut each label</option></select>
+    <button class="primary" type="button" data-print-direct="{{ code_list }}" data-out="print-result" data-reload="1">Print all ({{ tags|length }})</button>
+    {% endif %}
+    <a class="btn {{ 'quiet' if printer_on else 'primary' }}" href="/print?codes={{ code_list }}&amp;batch=1">Print page</a>
+  </div>{% endif %}
+</div>
+<div class="flash" id="print-result" role="status" hidden></div>
+{% if tags %}
+<div class="tbl"><table>
+  <thead><tr><th>Tag</th><th>Client</th><th>Device</th><th>Format</th><th>Why</th></tr></thead>
+  <tbody>{% for t in tags %}
+  <tr><td class="code"><a href="/tags/{{ t.code }}">{{ t.code }}</a></td><td>{{ t.client_name }}</td><td>{{ t.device_name or '—' }}</td>
+    <td>{{ m.tape_pill(t.format) }}</td><td class="small">{{ reasons[t.code]|join('; ') }}{% if t.label_problem_note %}: {{ t.label_problem_note }}{% endif %}</td></tr>
+  {% endfor %}</tbody>
+</table></div>
+{% else %}<div class="card"><p>Nothing to reprint.</p></div>{% endif %}
+{% endblock %}
