@@ -18,7 +18,9 @@ PAUSE = 0.4
 
 
 class HuduError(Exception):
-    pass
+    def __init__(self, message: str, status: int | None = None):
+        super().__init__(message)
+        self.status = status  # HTTP status when Hudu answered with an error, else None
 
 
 def api_key():
@@ -52,9 +54,11 @@ def _request(method: str, path: str, params: dict | None = None, body: dict | No
     except httpx.HTTPError as e:
         raise HuduError(f"Couldn't reach Hudu: {e}") from e
     if r.status_code in (401, 403):
-        raise HuduError("Hudu refused the API key (or the request came from outside the allowed network).")
+        raise HuduError(
+            "Hudu refused the API key (or the request came from outside the allowed network).", r.status_code
+        )
     if r.status_code >= 400:
-        raise HuduError(f"Hudu returned HTTP {r.status_code}.")
+        raise HuduError(f"Hudu returned HTTP {r.status_code}.", r.status_code)
     return r.json() if r.content else {}
 
 
@@ -157,6 +161,22 @@ def get_asset(asset_id: int) -> dict | None:
     data = _get("/assets", {"id": asset_id})
     assets = data.get("assets", []) if isinstance(data, dict) else []
     return assets[0] if assets else None
+
+
+def asset_state(asset_id: int) -> str:
+    """ "active", "archived" or "missing" (deleted, or not visible to this API key).
+
+    Hudu's asset lookup returns archived assets too, with `archived: true`.
+    """
+    try:
+        asset = get_asset(asset_id)
+    except HuduError as e:
+        if e.status == 404:
+            return "missing"
+        raise
+    if not asset:
+        return "missing"
+    return "archived" if asset.get("archived") else "active"
 
 
 _layout_cache: dict = {}

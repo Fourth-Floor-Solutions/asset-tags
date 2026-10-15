@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 
-from .. import auth, db, hudu, log
+from .. import auth, db, hudu, hudu_archive, log
 from ..tagops import (
     hudu_needs_sync,
 )
@@ -24,7 +24,18 @@ def clients_page(request: Request):
             "FROM clients c ORDER BY c.active DESC, c.is_internal DESC, c.name COLLATE NOCASE"
         ).fetchall()
         pending = sum(1 for t in conn.execute(db.TAG_SELECT) if hudu_needs_sync(t))
-    return page(request, "clients.html", clients=rows, hudu_pending=pending, hudu_write=hudu.write_enabled())
+        archive_last = hudu_archive.last_run(conn)
+        review = hudu_archive.for_review(conn)
+    return page(
+        request,
+        "clients.html",
+        clients=rows,
+        hudu_pending=pending,
+        hudu_write=hudu.write_enabled(),
+        archive_last=archive_last,
+        archive_review=review,
+        archive_every=hudu_archive.interval_minutes(),
+    )
 
 
 @router.post("/clients/sync")

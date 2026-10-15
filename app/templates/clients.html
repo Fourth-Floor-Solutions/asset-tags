@@ -34,6 +34,33 @@
   </tbody>
 </table>
 </div>
+{% if hudu_on %}
+<section class="card" id="archive-check" aria-labelledby="archive-h">
+  <div class="head">
+    <div><h2 id="archive-h">Devices archived in Hudu</h2>
+      <p class="muted small">When a device's asset is archived in Hudu, its tag is retired here.
+        {% if archive_every %}Checked every {{ archive_every }} minutes.{% else %}The automatic check is off (<code>HUDU_ARCHIVE_CHECK_MINUTES=0</code>); run it here.{% endif %}
+        Tags whose asset has been deleted, or unarchived after its tag was retired, are listed for review and not changed.</p></div>
+    {% if user.role == 'admin' %}<form method="post" action="/hudu/archive-check"><button type="submit">Check now</button></form>{% endif %}
+  </div>
+  {% set s = archive_last %}
+  {% if s %}
+  <p class="small">Last check {{ s.at[:16]|replace('T', ' ') }} UTC: {{ s.checked }}{% if s.checked != s.of %} of {{ s.of }}{% endif %} linked tag{{ '' if s.checked == 1 else 's' }} checked,
+    {{ s.retired|length }} retired{% if s.retired %} ({% for c in s.retired %}<a class="mono" href="/tags/{{ c }}">{{ c }}</a>{{ ', ' if not loop.last }}{% endfor %}){% endif %}.</p>
+  {% if s.error %}<div class="flash bad">The check stopped early: {{ s.error }}</div>{% endif %}
+  {% else %}<p class="muted small">Not run yet.</p>{% endif %}
+  {% if archive_review %}
+  <h3>To review</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Tag</th><th>Client</th><th>Device</th><th>Why</th></tr></thead>
+    <tbody>{% for t in archive_review %}
+    <tr><td class="code"><a href="/tags/{{ t.code }}">{{ t.code }}</a></td><td>{{ t.client_name }}</td><td>{{ t.device_name or '—' }}</td>
+      <td>{{ 'Hudu asset not found (deleted?)' if t.hudu_state == 'missing' else 'Asset unarchived in Hudu; tag still retired' }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% endif %}
+</section>
+{% endif %}
 {% if user.role == 'admin' %}
 <form class="card stack" method="post" action="/clients/new">
   <h2>Add a client by hand</h2>

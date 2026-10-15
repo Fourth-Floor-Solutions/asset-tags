@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from .. import auth, codes, db, hudu, labels
+from .. import auth, codes, db, hudu, hudu_archive, labels
 from ..tagops import (
     MAX_BATCH,
     check_format,
@@ -257,6 +257,8 @@ def tag_update(
             ),
         )
         db.log(conn, code, auth.label(user), "edited", "; ".join(changes))
+        if new["hudu_asset_id"] != tag["hudu_asset_id"]:
+            hudu_archive.clear_review(conn, code)  # relinked or unlinked: the old asset no longer matters
         herr = hudu_sync(conn, code, auth.label(user))
         updated = db.get_tag(conn, code)
     if herr:
@@ -279,10 +281,46 @@ def tag_status(request: Request, code: str, status: str = Form(...), reason: str
             conn.execute("UPDATE tags SET status=?, updated_at=? WHERE code=?", (status, db.now(), code))
             action = "retired" if status == "retired" else "restored"
             db.log(conn, code, auth.label(user), action, clean(reason, 300))
+            hudu_archive.clear_review(conn, code)
             herr = hudu_sync(conn, code, auth.label(user))
             if herr:
                 flash(request, f"Tag {action}, but Hudu wasn't updated: {herr}", "warn")
     return go(f"/tags/{code}")
+
+
+@router.post("/tags/{code}/keep-retired")
+def tag_keep_retired(request: Request, code: str):
+    """The Hudu asset was unarchived, but the tag should stay retired."""
+    user = auth.require_user(request)
+    with db.connection() as conn:
+        tag = db.get_tag(conn, code)
+        if tag and tag["status"] == "retired" and tag["hudu_state"] == "unarchived":
+            hudu_archive.clear_review(conn, code)
+            db.log(conn, code, auth.label(user), "hudu", "Kept retired after the Hudu asset was unarchived")
+    return go(f"/tags/{code}")
+
+
+@router.post("/hudu/archive-check")
+def hudu_archive_check(request: Request):
+    auth.require_admin(request)
+    if not hudu.configured():
+        flash(request, "Hudu isn't set up.", "bad")
+        return go("/clients")
+    with db.connection() as conn:
+        s = hudu_archive.run(conn)
+    if s.get("skipped"):
+        flash(request, s["skipped"], "warn")
+    elif s["error"]:
+        flash(request, f"The check stopped after {s['checked']} of {s['of']} tags: {s['error']}", "bad")
+    else:
+        review = len(s["missing"]) + len(s["unarchived"])
+        flash(
+            request,
+            f"Checked {s['checked']} tags in Hudu: {len(s['retired'])} retired"
+            + (f", {review} to review below." if review else "."),
+            "warn" if review else "ok",
+        )
+    return go("/clients")
 
 
 @router.post("/tags/{code}/hudu")

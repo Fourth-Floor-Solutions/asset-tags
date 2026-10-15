@@ -66,3 +66,17 @@ def conn():
     c = db.connect()
     yield c
     c.close()
+
+
+@pytest.fixture
+def fake(monkeypatch):
+    """Hudu set up and answered by tests.test_hudu.FakeHudu instead of the network."""
+    from app import hudu, settings
+    from tests.test_hudu import FakeHudu
+
+    f = FakeHudu()
+    settings.save({"hudu_url": "https://hudu.example.com"})
+    settings.save_secret("hudu_api_key", "test-key")
+    monkeypatch.setattr(hudu, "_request", f.request)
+    monkeypatch.setattr(hudu, "PAUSE", 0)
+    return f

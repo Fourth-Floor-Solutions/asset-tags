@@ -80,16 +80,6 @@ class FakeHudu:
         raise AssertionError(f"unexpected call {method} {path}")
 
 
-@pytest.fixture
-def fake(monkeypatch):
-    f = FakeHudu()
-    settings.save({"hudu_url": "https://hudu.example.com"})
-    settings.save_secret("hudu_api_key", "test-key")
-    monkeypatch.setattr(hudu, "_request", f.request)
-    monkeypatch.setattr(hudu, "PAUSE", 0)
-    return f
-
-
 def _fields(asset):
     return {f["label"]: f["value"] for f in asset["fields"]}
 

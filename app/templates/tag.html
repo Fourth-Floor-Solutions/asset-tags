@@ -20,7 +20,10 @@
 <div class="flash" id="print-result" role="status" hidden></div>
 {% if not tag.printed_count %}<div class="flash warn">This tag hasn't been printed yet.</div>
 {% elif reprint %}<div class="flash warn">The printed label no longer matches (client, label name or format changed). Print a replacement and swap it on the device.</div>{% endif %}
-{% if tag.status == 'retired' %}<div class="flash bad">Retired. This tag is no longer in use.</div>{% endif %}
+{% if tag.status == 'retired' %}<div class="flash bad">Retired. This tag is no longer in use.{% if tag.hudu_state == 'archived' %} Its device was archived in Hudu.{% endif %}</div>{% endif %}
+{% if tag.hudu_state == 'missing' %}<div class="flash warn">The linked Hudu asset ({{ tag.hudu_asset_id }}) can't be found in Hudu: it may have been deleted. Link this tag to the right asset, unlink it, or retire the tag.</div>
+{% elif tag.hudu_state == 'unarchived' %}<div class="flash warn">This tag was retired because its device was archived in Hudu, but the asset is no longer archived. Restore the tag if it's still on the device, or keep it retired.
+  <form method="post" action="/tags/{{ tag.code }}/keep-retired" class="inline"><button class="quiet sm" type="submit">Keep retired</button></form></div>{% endif %}
 <div class="grid2">
   <div class="card">
     <div class="preview">{{ svg|safe }}</div>
