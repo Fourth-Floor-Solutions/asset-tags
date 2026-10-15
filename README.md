@@ -343,12 +343,20 @@ anything you wouldn't print on the label itself out of the device name.
 
 Everything is in one SQLite file, `data/tagdesk.db`: tags, clients, users,
 printers, settings and history. Saved secrets are encrypted with
-`data/secret.key`. Back up the whole `data/` directory. For a
-consistent copy while running:
+`data/secret.key` (or `TAGDESK_SECRET_KEY`), which isn't in the database.
 
-```sh
-docker exec tagdesk python -c "import sqlite3; s=sqlite3.connect('/data/tagdesk.db'); s.backup(sqlite3.connect('/data/backup.db'))"
-```
+- **Download a backup:** Settings → **Backup** → **Download backup** gives a
+  consistent copy, safe while TagDesk is running. **Download secret.key**
+  gives the key (keep it separately and safely).
+- **Daily copies:** TagDesk keeps one copy a day in `data/backups/`, the
+  newest 7 by default. Set `BACKUP_KEEP` to change how many, or `0` to turn
+  them off.
+- **Restore:** stop TagDesk (`docker compose down`), copy the backup to
+  `data/tagdesk.db` and the key to `data/secret.key` (delete any
+  `tagdesk.db-wal` and `tagdesk.db-shm` files there), then
+  `docker compose up -d`.
+
+Backing up the whole `data/` directory also works.
 
 To update, pull the new code and run `docker compose up -d --build`. The
 database is upgraded automatically on start. To show the exact build in the

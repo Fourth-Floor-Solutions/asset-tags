@@ -140,6 +140,19 @@
 
   <div class="actions"><button class="primary" type="submit">{{ 'Save and continue' if setup else 'Save settings' }}</button></div>
 </form>
+{% if not setup %}
+<div class="card stack" id="backup" style="margin-top:20px">
+  <h2>Backup</h2>
+  <p class="muted small">Everything (tags, clients, users, printers, settings and history) is in one database file. Saved secrets in it are encrypted with a separate key, so keep a copy of the key too{% if key_in_env %} (here it's <code>TAGDESK_SECRET_KEY</code> in the server's <code>.env</code>){% endif %}. To restore, stop TagDesk, put the files back in the data folder as <code>tagdesk.db</code>{% if not key_in_env %} and <code>secret.key</code>{% endif %}, and start it again.</p>
+  <div class="actions">
+    <a class="btn primary" href="/settings/backup/tagdesk.db">Download backup</a>
+    {% if not key_in_env %}<a class="btn quiet" href="/settings/backup/secret.key">Download secret.key</a>{% endif %}
+  </div>
+  {% if backup_keep %}<p class="small">A copy is also saved every day in the data folder's <code>backups/</code>, keeping the newest {{ backup_keep }} (<code>BACKUP_KEEP</code>).
+    {% if backups %}Latest: <span class="mono">{{ backups[0].name }}</span> ({{ backups[0].kb }} KB){% if backups|length > 1 %}, and {{ backups|length - 1 }} older{% endif %}.{% else %}None yet: the first is made a minute after TagDesk starts.{% endif %}</p>
+  {% else %}<p class="small muted">Daily copies are off (<code>BACKUP_KEEP=0</code>).</p>{% endif %}
+</div>
+{% endif %}
 {% if audit and not setup %}
 <div class="card stack" style="margin-top:20px">
   <h2>Recent changes to settings</h2>

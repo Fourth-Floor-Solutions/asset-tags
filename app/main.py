@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import auth, db, hudu, hudu_archive, labels, log, settings
+from . import auth, backup, db, hudu, hudu_archive, labels, log, settings
 from .routes import clients, coverage, login, printing, public, tags, users
 from .routes import settings as settings_routes
 from .web import HERE, PUBLIC_BASE_URL, page
@@ -46,8 +46,10 @@ labels.apply_overrides(settings.formats())
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     hudu_archive.start()  # background check for devices archived in Hudu
+    backup.start()  # daily copy of the database in the data folder
     yield
     hudu_archive.stop()
+    backup.stop()
 
 
 app = FastAPI(title="TagDesk", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
