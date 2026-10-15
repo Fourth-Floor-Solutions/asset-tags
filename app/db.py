@@ -173,6 +173,7 @@ def init() -> None:
             "label_problem_note": "TEXT NOT NULL DEFAULT ''",
         },
     )
+    _add_columns(conn, "cassettes", {"low_logged": "INTEGER NOT NULL DEFAULT 0"})
     _migrate_printer(conn)
     # First code is picked at random in the lower half of the space so tags
     # don't start at 00000 and there is room to count upwards for decades.

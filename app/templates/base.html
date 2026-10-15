@@ -38,6 +38,7 @@
 {% if bg_streams %}{% set streams = bg_streams %}{% set animated = false %}{% include "_tag_streams.html" %}{% endif %}
 <main>
   {% if flash %}<div class="flash {{ flash.kind }}" role="status">{{ flash.text }}</div>{% endif %}
+  {% for t in tape_warnings %}<div class="flash warn" role="status">Tape is {{ 'out' if t.left_m <= 0 else 'low' }} in {{ t.printer }} ({{ t.tape }}){% if t.left_m > 0 %}: about {{ '%.1f'|format(t.left_m) }} m left{% endif %}. Fit a new cassette and press <b>New cassette fitted</b> on the <a href="/printer">Printer page</a>.</div>{% endfor %}
   {% if secret_warning %}<div class="flash warn" role="status">{{ secret_warning }} <a href="/settings#integrations">Settings</a></div>{% endif %}
   {% block main %}{% endblock %}
 </main>

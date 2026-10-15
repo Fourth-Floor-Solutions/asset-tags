@@ -174,7 +174,10 @@ def _check_message(name: str, host: str):
 def cassette_new(request: Request, cid: int):
     auth.require_user(request)
     with db.connection() as conn:
-        conn.execute("UPDATE cassettes SET used_cm = 0, estimated = 0, fitted_at = ? WHERE id = ?", (db.now(), cid))
+        conn.execute(
+            "UPDATE cassettes SET used_cm = 0, estimated = 0, low_logged = 0, fitted_at = ? WHERE id = ?",
+            (db.now(), cid),
+        )
     flash(request, "New cassette recorded. Tape use starts again from zero.")
     return go("/printer")
 

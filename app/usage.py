@@ -7,7 +7,9 @@ apart by width and colour, so swapping between them keeps both totals.
 
 from __future__ import annotations
 
-from . import db, labels, printer
+from . import db, labels, log, printer
+
+_log = log.get("printing")
 
 LOW_CM = 100  # warn when about 1 m is left
 LEAD_IN_MM = 25  # blank the printer cuts off at the start of every job
@@ -40,10 +42,36 @@ def track(conn, p, st: dict | None) -> None:
             "UPDATE cassettes SET used_cm = used_cm + ? WHERE printer_id = ? AND tape = ?",
             (count - last, p["id"], last_tape),
         )
+        _note_if_low(conn, p, last_tape)
     key = tape_key(st)
     if key:
         _cassette(conn, p["id"], key)
     conn.execute("UPDATE printers SET last_counter_cm = ?, last_tape = ? WHERE id = ?", (count, key, p["id"]))
+
+
+def _note_if_low(conn, p, key: str) -> None:
+    """Log once per cassette when it goes low (reset when a new cassette is fitted)."""
+    c = _cassette(conn, p["id"], key)
+    left = c["length_cm"] - c["used_cm"]
+    if left <= LOW_CM and not c["low_logged"]:
+        conn.execute("UPDATE cassettes SET low_logged = 1 WHERE id = ?", (c["id"],))
+        _log.warning("tape is low in %s (%s): about %.1f m left", p["name"], tape_name(key), max(0, left) / 100)
+
+
+def tape_name(key: str) -> str:
+    mm, _, colour = key.partition("|")
+    return f"{mm} mm {colour}"
+
+
+def low_cassettes(conn) -> list[dict]:
+    """The cassettes loaded right now (as last seen) that are low or empty. Database only, no printer calls."""
+    rows = conn.execute(
+        "SELECT p.name, c.tape, c.length_cm - c.used_cm AS left_cm FROM printers p "
+        "JOIN cassettes c ON c.printer_id = p.id AND c.tape = p.last_tape "
+        "WHERE c.length_cm - c.used_cm <= ? ORDER BY p.name",
+        (LOW_CM,),
+    ).fetchall()
+    return [{"printer": r["name"], "tape": tape_name(r["tape"]), "left_m": max(0, r["left_cm"]) / 100} for r in rows]
 
 
 def summary(conn, printer_id: int, st: dict | None) -> dict | None:
