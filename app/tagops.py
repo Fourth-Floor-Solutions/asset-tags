@@ -142,6 +142,16 @@ def record_printed(conn, tags: list, actor: str, how: str) -> int:
     return len(tags)
 
 
+def mark_seen(conn, code: str, actor: str, site: str = "", log_it: bool = True) -> None:
+    """Record that staff saw this tag (stocktake, or opening its scan link)."""
+    conn.execute(
+        "UPDATE tags SET last_seen_at=?, last_seen_by=?, last_seen_site=? WHERE code=?",
+        (db.now(), actor, site, code),
+    )
+    if log_it:
+        db.log(conn, code, actor, "seen", site)
+
+
 def printers_live() -> list:
     """Every printer with its live status, updating tape tracking as a side effect."""
     with db.connection() as conn:

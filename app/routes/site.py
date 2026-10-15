@@ -11,7 +11,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from .. import auth, codes, coverage, db, hudu, hudu_archive
-from ..tagops import clients, hudu_sync
+from ..tagops import clients, hudu_sync, mark_seen
 from ..web import clean, hudu_link, page
 
 router = APIRouter()
@@ -36,7 +36,68 @@ def tag_a_site(request: Request):
     auth.require_user(request)
     with db.connection() as conn:
         cl = clients(conn)
-    return page(request, "tag_a_site.html", clients=cl)
+    return page(request, "tag_a_site.html", clients=cl, mode="tag")
+
+
+@router.get("/stocktake", response_class=HTMLResponse)
+def stocktake(request: Request):
+    auth.require_user(request)
+    with db.connection() as conn:
+        cl = clients(conn)
+    return page(request, "tag_a_site.html", clients=cl, mode="stocktake")
+
+
+@router.post("/api/site/seen")
+async def site_seen(request: Request):
+    """Stocktake: record a scanned tag as seen. Answers with what it is, so the phone can show it."""
+    user = auth.require_user(request)
+    try:
+        body = await request.json()
+    except ValueError:
+        return JSONResponse({"error": "Send JSON."}, status_code=400)
+    canon = codes.parse(str((body or {}).get("code") or "")) if isinstance(body, dict) else None
+    with db.connection() as conn:
+        t = db.get_tag(conn, canon) if canon else None
+        if not t:
+            return JSONResponse({"error": "That isn't a TagDesk tag here."}, status_code=404)
+        mark_seen(conn, t["code"], auth.label(user), clean(str(body.get("site") or ""), 80))
+        info = _tag_info(db.get_tag(conn, t["code"]))
+    info["other_client"] = str(t["client_id"]) != str(body.get("client_id"))
+    return info
+
+
+@router.get("/api/site/unseen")
+def site_unseen(request: Request, client_id: int, since: str):
+    """Stocktake finish: the client's tags in use that weren't seen since the stocktake started."""
+    auth.require_user(request)
+    with db.connection() as conn:
+        rows = conn.execute(
+            db.TAG_SELECT + " WHERE t.client_id = ? AND t.status = 'active' "
+            "AND (t.last_seen_at IS NULL OR t.last_seen_at < ?) ORDER BY t.device_name COLLATE NOCASE, t.code",
+            (client_id, since[:25]),
+        ).fetchall()
+    return {"tags": [_tag_info(t) | {"last_seen_at": t["last_seen_at"]} for t in rows]}
+
+
+@router.get("/not-seen", response_class=HTMLResponse)
+def not_seen(request: Request, client_id: str = "", months: int = 12):
+    """Tags in use that nobody has scanned for a while: candidates to find, or retire."""
+    from datetime import UTC, datetime, timedelta
+
+    auth.require_user(request)
+    months = months if months in (3, 6, 12, 24) else 12
+    cutoff = (datetime.now(UTC) - timedelta(days=30 * months)).replace(microsecond=0).isoformat()
+    where = "t.status = 'active' AND COALESCE(t.last_seen_at, t.created_at) < ?"
+    args: list[object] = [cutoff]
+    if client_id.isdigit():
+        where += " AND t.client_id = ?"
+        args.append(int(client_id))
+    with db.connection() as conn:
+        rows = conn.execute(
+            db.TAG_SELECT + " WHERE " + where + " ORDER BY c.name COLLATE NOCASE, t.last_seen_at", args
+        ).fetchall()
+        cl = clients(conn)
+    return page(request, "not_seen.html", tags=rows, clients=cl, client_id=client_id, months=months)
 
 
 @router.get("/api/site/tag/{code}")

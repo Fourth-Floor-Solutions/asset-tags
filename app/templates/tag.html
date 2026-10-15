@@ -41,6 +41,7 @@
         {{ hs }}{% if tag.hudu_sync_at %} <span class="muted small">· {{ tag.hudu_sync_at[:16]|replace('T', ' ') }} UTC</span>{% endif %}
         <form method="post" action="/tags/{{ tag.code }}/hudu" class="inline"><button class="quiet sm" type="submit">Write to Hudu</button></form></dd>
       {% endif %}
+      <dt>Last seen</dt><dd>{% if tag.last_seen_at %}{{ tag.last_seen_at[:10] }} by {{ tag.last_seen_by }}{% if tag.last_seen_site %} · {{ tag.last_seen_site }}{% endif %}{% else %}<span class="muted">Not scanned yet</span>{% endif %}</dd>
       <dt>Issued</dt><dd>{{ tag.created_at[:10] }} by {{ tag.created_by }}</dd>
     </dl>
     <h2>History</h2>

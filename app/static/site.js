@@ -6,7 +6,8 @@
   if (!app) return;
 
   var ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-  var STORE = "tagdesk-site";
+  var stocktake = app.dataset.mode === "stocktake";
+  var STORE = stocktake ? "tagdesk-stocktake" : "tagdesk-site";
   var $ = function (id) { return document.getElementById(id); };
   var hudu = app.dataset.hudu === "1";
   var state = load();
@@ -60,7 +61,10 @@
   }
   $("site-start").addEventListener("click", function () {
     var client = $("site-client").value;
-    if (state.client !== client) state.done = [];
+    if (state.client !== client || stocktake) state.done = [];
+    // Server times look like 2026-10-16T09:00:00+00:00; match that so "seen since" compares correctly.
+    if (stocktake) state.started = new Date().toISOString().slice(0, 19) + "+00:00";
+    if (stocktake && $("site-unseen-box")) $("site-unseen-box").hidden = true;
     state.client = client;
     state.site = $("site-name").value.trim();
     save();
@@ -163,9 +167,7 @@
         if (code && (code !== lastCode || now - lastAt > 4000)) {
           lastCode = code; lastAt = now;
           if (navigator.vibrate) navigator.vibrate(60);
-          stopCamera();
-          open(code);
-          return;
+          if (stocktake) { seen(code); } else { stopCamera(); open(code); return; }
         }
         if (!code) camStatus("That QR code isn't a TagDesk tag.");
       }
@@ -178,8 +180,50 @@
     var code = parseCode($("site-code").value);
     if (!code) { camStatus("Codes are five characters, like 7KQ3M."); return; }
     $("site-code").value = "";
+    if (stocktake) { seen(code); return; }
     stopCamera();
     open(code);
+  });
+
+  // ---------- stocktake ----------
+  function seen(code) {
+    api("POST", "/api/site/seen", { code: code, client_id: state.client, site: state.site }).then(function (t) {
+      var ok = $("site-saved");
+      ok.hidden = false;
+      if (t._status !== 200) { ok.className = "flash bad"; ok.textContent = t.error || "Couldn't record " + code + "."; return; }
+      var what = t.device_name || t.serial || (t.status === "unassigned" ? "a blank tag" : "no device recorded");
+      ok.className = "flash " + (t.other_client || t.status !== "active" ? "warn" : "ok");
+      ok.textContent = "Seen " + t.code + " · " + what +
+        (t.other_client ? " (belongs to " + t.client_name + ")" : "") + (t.status === "retired" ? " (retired)" : "");
+      state.done = (state.done || []).filter(function (x) { return x.code !== t.code; });
+      state.done.unshift({ code: t.code, device: what, at: new Date().toTimeString().slice(0, 5) });
+      save();
+      renderDone();
+    });
+  }
+  var finish = $("site-finish");
+  if (finish) finish.addEventListener("click", function () {
+    stopCamera();
+    api("GET", "/api/site/unseen?client_id=" + encodeURIComponent(state.client) + "&since=" + encodeURIComponent(state.started || "")).then(function (d) {
+      var list = $("site-unseen");
+      list.innerHTML = "";
+      (d.tags || []).forEach(function (t) {
+        var li = document.createElement("li");
+        var time = document.createElement("time"); time.textContent = t.last_seen_at ? t.last_seen_at.slice(0, 10) : "never";
+        var span = document.createElement("span");
+        var a = document.createElement("a"); a.href = "/tags/" + t.code; a.className = "mono"; a.textContent = t.code;
+        span.appendChild(a); span.appendChild(document.createTextNode(" · " + (t.device_name || t.serial || "")));
+        li.appendChild(time); li.appendChild(span);
+        list.appendChild(li);
+      });
+      if (!(d.tags || []).length) {
+        var li = document.createElement("li");
+        li.textContent = "Every tag in use for this client was scanned.";
+        list.appendChild(li);
+      }
+      $("site-unseen-box").hidden = false;
+      $("site-unseen-box").scrollIntoView({ behavior: "smooth" });
+    });
   });
 
   // ---------- one tag ----------
@@ -273,7 +317,7 @@
       list.appendChild(li);
     });
     $("site-done-box").hidden = !done.length;
-    $("site-count").textContent = done.length ? " · " + done.length + " tagged" : "";
+    $("site-count").textContent = done.length ? " · " + done.length + (stocktake ? " seen" : " tagged") : "";
   }
   $("site-clear").addEventListener("click", function () { state.done = []; save(); renderDone(); });
 
