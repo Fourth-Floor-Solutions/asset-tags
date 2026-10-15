@@ -32,8 +32,9 @@ works just as well for a single organisation tagging its own equipment.
   Proxy Manager…). People will scan tags from their phones, so the app usually
   needs to be reachable from the internet.
 - Optional: a Brother **PT-P950NW** (Ethernet or Wi-Fi) or **PT-P900W**
-  (Wi-Fi) label printer reachable from the server over the network. Only the
-  PT-P950NW has been tested so far; see [Label printers](#label-printers). Without one you can
+  (Wi-Fi) label printer that the **TagDesk server** can reach over the
+  network (see [Network access to the printer](#network-access-to-the-printer)).
+  Only the PT-P950NW has been tested so far. Without one you can
   still print from the browser through the printer's normal driver.
 
 ## Quick start
@@ -122,6 +123,28 @@ Their siblings, the PT-P900 (USB only) and PT-P910BT (Bluetooth and USB),
 use the same commands but have no network connection, so the app can't
 reach them. Other Brother ranges (QL, TD, the smaller PT-P700 models) use
 different commands and won't work.
+
+### Network access to the printer
+
+**The TagDesk server sends print jobs itself; the user's browser doesn't.**
+When someone presses *Print label*, the server running TagDesk opens a
+connection to the printer's IP address. So the printer must be reachable
+**from the server**, not just from the person's computer:
+
+- **Simplest:** run TagDesk on the same local network as the printer, for
+  example on a small server or VM in the office.
+- **TagDesk hosted elsewhere** (a data centre, the cloud, another site): it
+  needs a route to the printer's network, such as a site-to-site VPN. Allow
+  **TCP 9100** and **UDP 161** from the TagDesk server to the printer.
+- **In Docker,** the container reaches the printer through the host's
+  network, so a printer the host can reach is normally fine. Check from the
+  host first: `nc -vz <printer-ip> 9100`.
+- **No route to the printer?** Use *Print page* → *Print from browser*, which
+  prints through the printer driver on the user's own computer. You lose the
+  cassette check and tape tracking.
+
+The Printer page shows *didn't answer a status request* when the server can't
+reach a printer.
 
 The app talks to the printer directly:
 
