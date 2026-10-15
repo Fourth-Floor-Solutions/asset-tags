@@ -8,6 +8,9 @@
   <span class="lbl">Hudu asset</span>
   <input type="hidden" id="hudu_asset_id" name="hudu_asset_id" value="{{ form.hudu_asset_id or '' }}">
   <input type="hidden" id="hudu_asset_url" name="hudu_asset_url" value="{{ form.hudu_asset_url or '' }}">
+  <div class="linked suggest" id="hudu-suggest" role="status" hidden>
+    Hudu has an asset with this serial: <b data-name></b> <button type="button" class="quiet sm">Link it</button>
+  </div>
   <div class="linked" id="hudu-linked" data-name="{{ form.device_name or '' }}" hidden>
     Linked to <b data-name></b> <a href="#" target="_blank" rel="noopener">Open in Hudu</a>
     <button type="button" class="quiet" id="hudu-unlink">Unlink</button>
