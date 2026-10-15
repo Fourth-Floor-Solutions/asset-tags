@@ -68,6 +68,49 @@ templates.env.globals["static"] = lambda name: f"/static/{name}?v={_VERSIONS.get
 SETUP_EXEMPT = ("/setup", "/static/", "/favicon", "/login", "/logout", "/auth/", "/healthz", "/version", "/changelog")
 
 
+CSP = ("default-src 'self'; "
+       "script-src 'self' 'unsafe-inline'; "
+       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+       "font-src 'self' https://fonts.gstatic.com; "
+       "img-src 'self' data:; connect-src 'self'; "
+       "frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'")
+SECURITY_HEADERS = {
+    "Content-Security-Policy": CSP,
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "same-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+}
+SAFE_METHODS = ("GET", "HEAD", "OPTIONS")
+
+# Public scan lookups per client IP, to slow down stepping through codes.
+SCAN_WINDOW = 60
+SCAN_MAX = 60
+_scan_hits = defaultdict(deque)
+
+
+def _origin_ok(request: Request) -> bool:
+    """Reject cross-site form posts: the Origin (or Referer) must be this site."""
+    from urllib.parse import urlparse
+
+    origin = request.headers.get("origin") or request.headers.get("referer")
+    if not origin or origin == "null":
+        return origin is None                     # no header at all: non-browser client
+    allowed = {urlparse(PUBLIC_BASE_URL).netloc.lower(), (request.headers.get("host") or "").lower()}
+    return urlparse(origin).netloc.lower() in allowed
+
+
+@app.middleware("http")
+async def security(request: Request, call_next):
+    if request.method not in SAFE_METHODS and not _origin_ok(request):
+        response = PlainTextResponse("This request came from another site and was refused.", status_code=403)
+    else:
+        response = await call_next(request)
+    for k, val in SECURITY_HEADERS.items():
+        response.headers.setdefault(k, val)
+    return response
+
+
 @app.middleware("http")
 async def load_user(request: Request, call_next):
     request.state.user = auth.session_user(request)
@@ -222,6 +265,35 @@ def clients(conn, include_inactive: bool = False):
     return conn.execute(sql + " ORDER BY is_internal DESC, name COLLATE NOCASE").fetchall()
 
 
+def hudu_link(url: str) -> str:
+    """A Hudu asset link only if it's http(s) on the configured Hudu host; otherwise none.
+
+    The value comes from the browser, so a javascript: or other-site link must never
+    be stored and shown as 'Open in Hudu'.
+    """
+    from urllib.parse import urlparse
+
+    url = clean(url, 500)
+    base = urlparse(hudu.base_url())
+    u = urlparse(url)
+    if u.scheme in ("http", "https") and base.netloc and u.netloc.lower() == base.netloc.lower():
+        return url
+    return ""
+
+
+def safe_next(target: str) -> str:
+    """Where to go after signing in: only a path on this site, never another site.
+
+    Rejects //host and /\\host (browsers treat both as another site), schemes,
+    and control characters.
+    """
+    t = (target or "").strip()
+    if (not t.startswith("/") or t.startswith("//") or t.startswith("/\\") or "\\" in t
+            or any(ord(ch) < 32 for ch in t)):
+        return "/"
+    return t
+
+
 def tel_link(phone: str) -> str:
     """'+44 (0)20 7946 0000' -> '+442079460000': the bracketed trunk 0 must not be dialled."""
     import re
@@ -294,7 +366,7 @@ def healthz():
 
 @app.get("/login", response_class=HTMLResponse)
 def login_form(request: Request, next: str = "/"):
-    return page(request, "login.html", next=next if next.startswith("/") else "/")
+    return page(request, "login.html", next=safe_next(next))
 
 
 # Failed sign-ins per client IP; the sign-in page is usually internet-facing.
@@ -325,16 +397,17 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
                            "ORDER BY username = ? DESC LIMIT 1", (who, who, who)).fetchone()
     finally:
         conn.close()
-    if not row or not auth.verify_password(password, row["password"]):
+    # Always run the password hash, so unknown usernames take as long as wrong passwords.
+    if not auth.verify_password(password, row["password"] if row else auth.DUMMY_HASH) or not row:
         _login_fails[ip].append(time.monotonic())
         return page(request, "login.html", status_code=401, next=next, error="Username or password is wrong.")
     _login_fails.pop(ip, None)
     request.session.clear()
     request.session["uid"] = row["id"]
-    return go(next if next.startswith("/") and not next.startswith("//") else "/")
+    return go(safe_next(next))
 
 
-@app.get("/logout")
+@app.post("/logout")
 def logout(request: Request):
     request.session.clear()
     return go("/login")
@@ -345,7 +418,7 @@ async def sso_login(request: Request, next: str = "/"):
     client = auth.oauth()
     if not client:
         return go("/login")
-    request.session["sso_next"] = next if next.startswith("/") else "/"
+    request.session["sso_next"] = safe_next(next)
     return await client.entra.authorize_redirect(request, f"{PUBLIC_BASE_URL}/auth/callback")
 
 
@@ -359,12 +432,16 @@ async def sso_callback(request: Request):
     except Exception:
         return page(request, "login.html", status_code=401, next="/", error="Microsoft sign-in didn't complete. Try again.")
     info = token.get("userinfo") or {}
+    cfg = auth.sso_config()
+    if cfg and auth.GUID_RE.match(cfg[0]) and (info.get("tid") or "").lower() != cfg[0].lower():
+        return page(request, "login.html", status_code=403, next="/",
+                    error="That Microsoft account belongs to a different organisation.")
     email = info.get("email") or info.get("preferred_username") or ""
     row = auth.sso_user_for(email, info.get("name") or "")
     if not row:
         return page(request, "login.html", status_code=403, next="/",
                     error=f"{email or 'That account'} doesn't have access. Ask an admin to add you.")
-    nxt = request.session.pop("sso_next", "/")
+    nxt = safe_next(request.session.pop("sso_next", "/"))
     request.session.clear()
     request.session["uid"] = row["id"]
     return go(nxt)
@@ -432,7 +509,7 @@ def tag_new(request: Request, client_id: int = Form(...), format: str = Form("st
         "device_name": clean(device_name, 120), "model": clean(model, 120), "serial": clean(serial, 120),
         "notes": clean(notes, 2000),
         "hudu_asset_id": int(hudu_asset_id) if hudu_asset_id.isdigit() else None,
-        "hudu_asset_url": clean(hudu_asset_url, 500) if hudu_asset_id.isdigit() else "",
+        "hudu_asset_url": hudu_link(hudu_asset_url) if hudu_asset_id.isdigit() else "",
     }
     conn = db.connect()
     try:
@@ -529,7 +606,7 @@ def tag_update(request: Request, code: str, client_id: int = Form(...), format: 
             "device_name": clean(device_name, 120), "model": clean(model, 120), "serial": clean(serial, 120),
             "notes": clean(notes, 2000),
             "hudu_asset_id": int(hudu_asset_id) if hudu_asset_id.isdigit() else None,
-            "hudu_asset_url": clean(hudu_asset_url, 500) if hudu_asset_id.isdigit() else "",
+            "hudu_asset_url": hudu_link(hudu_asset_url) if hudu_asset_id.isdigit() else "",
         }
         changes = []
         for k, v in new.items():
@@ -1085,6 +1162,8 @@ async def settings_save(request: Request):
         error = "The Hudu address must start with https://"
     elif v["entra_tenant_id"] and not TENANT.match(v["entra_tenant_id"]):
         error = "The tenant ID should be a GUID or a domain like example.onmicrosoft.com."
+    elif v["entra_tenant_id"].lower() in auth.MULTI_TENANT:
+        error = "Use your own tenant ID, not 'common', 'organizations' or 'consumers': those let other organisations' accounts sign in."
     elif v["entra_client_id"] and not GUID.match(v["entra_client_id"]):
         error = "The client ID (application ID) should be a GUID like 00000000-0000-0000-0000-000000000000."
     elif v["entra_secret_expires"] and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", v["entra_secret_expires"]):
@@ -1120,6 +1199,10 @@ async def settings_save(request: Request):
     finally:
         conn.close()
     env_set = {k for k in settings.ENV_WINS if settings.source(k) == "env"}
+    if (v["hudu_url"] != before["hudu_url"] and before["hudu_url"] and "hudu_api_key" not in env_set
+            and settings.secret_info("hudu_api_key")["status"] == "set" and not (data.get("hudu_api_key") or "").strip()):
+        # Don't send a saved key to a different server without the admin re-entering it.
+        return _settings_page(request, setup, error="You changed the Hudu address: enter the API key again too.", form=v)
     to_save = {k: val for k, val in v.items() if k not in env_set}
     to_save["source_url"] = to_save.get("source_url") or settings.DEFAULTS["source_url"]
     settings.save(to_save)
@@ -1402,6 +1485,16 @@ def scan(request: Request, raw: str):
         return page(request, "message.html", status_code=404, heading="Page not found",
                     body="Check the address and try again.")
     user = getattr(request.state, "user", None)
+    if not user:
+        ip = request.client.host if request.client else "?"
+        hits = _scan_hits[ip]
+        now_t = time.monotonic()
+        while hits and hits[0] < now_t - SCAN_WINDOW:
+            hits.popleft()
+        if len(hits) >= SCAN_MAX:
+            return page(request, "message.html", status_code=429, heading="Too many lookups",
+                        body="Please wait a minute and try again.")
+        hits.append(now_t)
     conn = db.connect()
     try:
         tag = db.get_tag(conn, code)

@@ -45,6 +45,14 @@ First public release, under the AGPL-3.0.
 ### Security
 - Failed sign-ins are limited per IP address, and only the reverse proxy may pass on the visitor's IP.
 - Secrets saved in Settings are encrypted, with the key kept outside the database, and are never shown again.
+- Fixed redirects after sign-in so they can only go to a page on this site.
+- Hudu links on tags must point at your configured Hudu server, so a link can't run a script.
+- Microsoft sign-in refuses multi-tenant settings (`common`, `organizations`) and accounts from other organisations.
+- Changing the Hudu address needs the API key entered again, so a saved key isn't sent to a new server.
+- Unknown usernames and wrong passwords take the same time to check.
+- Security headers (Content-Security-Policy, no framing, nosniff, referrer policy); cross-site form posts are refused; signing out is a form post.
+- Public code lookups are limited per IP address.
+- `SECURITY.md` explains how to report a vulnerability privately; tests and a dependency audit run on every pull request ([#9](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/9)).
 
 ## 30 September 2026
 

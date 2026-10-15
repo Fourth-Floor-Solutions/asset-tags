@@ -285,6 +285,29 @@ Serial numbers, notes, Hudu links and history are only shown to signed-in
 staff. Codes are sequential, so anyone could try codes one after another; keep
 anything you wouldn't print on the label itself out of the device name.
 
+## Security
+
+- Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
+- **Sign-in:** passwords are hashed (PBKDF2), failed sign-ins are limited per
+  IP, and Microsoft sign-in only accepts accounts from your own tenant.
+- **Sessions:** signed, HTTP-only cookies, HTTPS-only when `PUBLIC_BASE_URL`
+  is https, and SameSite=Lax. Cross-site form posts are refused, and signing
+  out is a form post.
+- **Headers:** a Content-Security-Policy, no framing, `nosniff` and a
+  same-origin referrer policy. Add HSTS at your reverse proxy.
+- **Secrets** saved in Settings are encrypted, with the key outside the
+  database; see [Configuration](#configuration).
+- **Public scan page:** codes are short and issued in sequence so they're easy
+  to read, which means they're also easy to guess. Anyone can look up a code
+  and see the owner's name, the device name and your support contact, so put
+  nothing in the device name you wouldn't print on the label. Lookups are
+  limited per IP.
+- **Admins** are trusted: they can point the app at any Hudu server or printer
+  address. Give the admin role only to people who need it.
+- **The container** runs as a non-root user with a read-only filesystem and
+  no extra capabilities. Only your reverse proxy should be able to reach its
+  port.
+
 ## Data and backups
 
 Everything is in one SQLite file, `data/tagdesk.db`: tags, clients, users,

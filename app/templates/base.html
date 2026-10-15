@@ -28,7 +28,7 @@
       {% if user.role == 'admin' %}<a href="/users" class="{{ 'on' if path.startswith('/users') }}">Users</a>
       <a href="/settings" class="{{ 'on' if path.startswith('/settings') or path.startswith('/setup') }}">Settings</a>{% endif %}
     </nav>
-    <div class="who"><a href="/account">{{ user_label(user) }}</a><a href="/logout">Sign out</a></div>
+    <div class="who"><a href="/account">{{ user_label(user) }}</a><form method="post" action="/logout" class="inline"><button type="submit" class="linklike">Sign out</button></form></div>
   </div>
 </header>
 {% endif %}

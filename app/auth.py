@@ -17,6 +17,9 @@ from fastapi import Request
 from . import db
 
 ITERATIONS = 310_000
+GUID_RE = __import__("re").compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+# Tenant values that accept accounts from any organisation; never allowed.
+MULTI_TENANT = ("common", "organizations", "consumers")
 
 
 class LoginRequired(Exception):
@@ -42,6 +45,11 @@ def verify_password(password: str, stored: Optional[str]) -> bool:
         return False
     check = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), int(iters)).hex()
     return hmac.compare_digest(check, digest)
+
+
+# A real hash of a random password, checked when the username doesn't exist so
+# the response takes the same time either way.
+DUMMY_HASH = hash_password(secrets.token_hex(16))
 
 
 def seed_admin() -> None:
@@ -93,6 +101,8 @@ def sso_config():
     s = settings.get_all()
     secret = settings.secret("entra_client_secret")
     tenant, client = s["entra_tenant_id"].strip(), s["entra_client_id"].strip()
+    if tenant.lower() in MULTI_TENANT:
+        return None                       # refuse: would let other organisations' accounts in
     return (tenant, client, secret) if tenant and client and secret else None
 
 

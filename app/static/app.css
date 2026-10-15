@@ -211,3 +211,6 @@ select.strip-opt { width: auto; padding: 6px 8px; font-size: 13px; }
 .tag-streams.static .stream-track { animation: none; transform: translateX(-12%); }
 @media (prefers-color-scheme: dark) { .tag-streams.static { opacity: .10; } }
 .top, main, .foot { position: relative; z-index: 1; }
+form.inline { display: inline; margin: 0; }
+button.linklike { all: unset; cursor: pointer; text-decoration: underline; color: inherit; font: inherit; }
+button.linklike:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }

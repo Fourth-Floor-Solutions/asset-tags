@@ -1,0 +1,28 @@
+# Tests and a dependency audit on every pull request and push to main,
+# run inside the same Docker image that's deployed.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image
+        run: docker build -t tagdesk:ci --build-arg GIT_COMMIT=$(git rev-parse --short HEAD) .
+      - name: Tests
+        run: >
+          docker run --rm --user root -v "$PWD/tests:/srv/tests:ro" -e DATA_DIR=/tmp/data tagdesk:ci
+          sh -c "pip install -q pytest && cd /srv && python -m pytest -q -p no:cacheprovider tests"
+      - name: Dependency audit
+        run: >
+          docker run --rm --user root tagdesk:ci
+          sh -c "pip install -q pip-audit && pip-audit -l --progress-spinner off"
