@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Tag a site{% endblock %}
+{% block head %}<script src="{{ static('jsQR.js') }}" defer></script><script src="{{ static('site.js') }}" defer></script>{% endblock %}
+{% block main %}
+<div id="site-app" class="site" data-hudu="{{ '1' if hudu_on else '' }}" data-base="{{ public_base }}">
+
+  <section id="site-setup" class="card stack">
+    <h1>Tag a site</h1>
+    <p class="muted">Scan each blank tag with this phone's camera, say which device it's on, save, and scan the next.</p>
+    <div class="field"><label for="site-client">Client</label>
+      <select id="site-client">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="site-name">Site (optional)</label>
+      <input type="text" id="site-name" maxlength="80" placeholder="e.g. Head office, 2nd floor"></div>
+    <button class="primary big" type="button" id="site-start">Start tagging</button>
+  </section>
+
+  <section id="site-scan" hidden>
+    <div class="site-bar">
+      <div><b id="site-title"></b><span class="muted small" id="site-count"></span></div>
+      <button class="quiet sm" type="button" id="site-change">Change</button>
+    </div>
+
+    <div class="flash ok" id="site-saved" role="status" hidden></div>
+    <div id="site-camera" class="camera">
+      <video id="site-video" playsinline muted></video>
+      <div class="camera-frame" aria-hidden="true"></div>
+      <button class="primary big camera-start" type="button" id="site-cam-on">Scan a tag</button>
+    </div>
+    <p class="hint" id="site-cam-status" role="status"></p>
+    <form class="filters" id="site-manual">
+      <input type="text" id="site-code" maxlength="12" placeholder="Or type the code (Micro tags have no QR)" aria-label="Tag code" autocapitalize="characters" autocomplete="off">
+      <button class="quiet" type="submit">Go</button>
+    </form>
+
+    <form id="site-form" class="card stack" hidden>
+      <div class="site-code-row"><span class="big-code" id="f-code"></span><span class="pill" id="f-state"></span></div>
+      <div class="flash bad" id="f-error" role="alert" hidden></div>
+      {% if hudu_on %}
+      <div class="field" id="f-hudu-box"><label for="f-hudu-q">Hudu device</label>
+        <input type="search" id="f-hudu-q" placeholder="Search devices without a tag" autocomplete="off">
+        <div class="site-devices" id="f-devices"></div>
+        <div class="linked" id="f-linked" hidden>Linked to <b data-name></b> <button type="button" class="quiet sm" id="f-unlink">Unlink</button></div>
+        <span class="hint" id="f-hudu-hint"></span>
+      </div>
+      {% endif %}
+      <div class="field"><label for="f-name">Device name</label><input type="text" id="f-name" maxlength="120" autocomplete="off"></div>
+      <div class="row">
+        <div class="field"><label for="f-model">Model</label><input type="text" id="f-model" maxlength="120" autocomplete="off"></div>
+        <div class="field"><label for="f-serial">Serial number</label><input type="text" id="f-serial" maxlength="120" autocomplete="off" autocapitalize="characters"></div>
+      </div>
+      <div class="actions">
+        <button class="primary big" type="submit" id="f-save">Save and scan next</button>
+        <button class="quiet" type="button" id="f-skip">Skip</button>
+      </div>
+    </form>
+
+
+    <section class="stack-sm" id="site-done-box" hidden>
+      <h2>Tagged here</h2>
+      <ul class="history" id="site-done"></ul>
+      <button class="quiet sm" type="button" id="site-clear">Clear this list</button>
+    </section>
+  </section>
+</div>
+{% endblock %}

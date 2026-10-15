@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from . import auth, backup, db, hudu, hudu_archive, labels, log, settings
-from .routes import api, clients, coverage, login, printing, public, tags, users
+from .routes import api, clients, coverage, login, printing, public, site, tags, users
 from .routes import settings as settings_routes
 from .web import HERE, PUBLIC_BASE_URL, page
 
@@ -55,7 +55,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title="TagDesk", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=os.path.join(HERE, "static")), name="static")
 
-SETUP_EXEMPT = ("/setup", "/static/", "/favicon", "/login", "/logout", "/auth/", "/healthz", "/version", "/changelog")
+SETUP_EXEMPT = (
+    "/setup",
+    "/static/",
+    "/favicon",
+    "/manifest",
+    "/icon-",
+    "/login",
+    "/logout",
+    "/auth/",
+    "/healthz",
+    "/version",
+    "/changelog",
+)
 
 
 CSP = (
@@ -71,7 +83,7 @@ SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "same-origin",
-    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+    "Permissions-Policy": "camera=(self), microphone=(), geolocation=(), payment=()",  # camera: Tag a site
 }
 SAFE_METHODS = ("GET", "HEAD", "OPTIONS")
 
@@ -160,5 +172,6 @@ app.include_router(settings_routes.router)
 app.include_router(api.router)
 app.include_router(clients.router)
 app.include_router(coverage.router)
+app.include_router(site.router)
 app.include_router(users.router)
 app.include_router(public.router)  # last: its /{raw} scan route matches any single path segment

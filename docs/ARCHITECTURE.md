@@ -20,6 +20,7 @@ database, server-rendered Jinja templates and a little plain JavaScript.
 | `app/db.py`, `app/codes.py` | SQLite schema and migrations; tag codes. |
 | `app/log.py` | The application log. |
 | `app/apikeys.py`, `app/routes/api.py` | API keys and the JSON API under `/api/v1` ([API.md](API.md)). |
+| `app/routes/site.py`, `static/site.js`, `static/jsQR.js` | Tag a site: scanning in the browser with jsQR, saving through small JSON endpoints. |
 | `app/coverage.py`, `app/hudu_archive.py`, `app/backup.py` | Tag coverage, the Hudu archive check, and backups. |
 
 The scan route `/{raw}` matches any single path segment, so the `public`
