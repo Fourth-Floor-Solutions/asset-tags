@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as m with context %}
 {% block title %}Label printers{% endblock %}
 {% block main %}
 <div class="head">
@@ -42,7 +43,7 @@
           </form></details>
       </div></dd>
     {% endif %}
-    <dt>Prints now</dt><dd>{% if x.fits %}{% for f in x.fits %}<span class="pill tape" style="background: {{ tape_fill(f) }}">{{ formats[f].name }}</span> {% endfor %}{% else %}No tag format fits this tape{% endif %}</dd>
+    <dt>Prints now</dt><dd>{% if x.fits %}{% for f in x.fits %}{{ m.tape_pill(f) }} {% endfor %}{% else %}No tag format fits this tape{% endif %}</dd>
   </dl>
   {% endif %}
   {% if user.role == 'admin' %}

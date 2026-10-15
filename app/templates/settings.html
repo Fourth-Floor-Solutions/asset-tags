@@ -82,7 +82,7 @@
     {% if info.status == 'env' %}
       <input type="password" id="{{ key }}" value="from .env" disabled>
       <span class="hint">Set in <code>.env</code> as <code>{{ env_names[key] }}</code>, which takes priority.
-        <button class="quiet" type="submit" formaction="/settings/secrets/{{ key }}/import" formnovalidate style="padding:2px 8px;font-size:12px">Copy into Settings</button></span>
+        <button class="quiet sm" type="submit" formaction="/settings/secrets/{{ key }}/import" formnovalidate>Copy into Settings</button></span>
     {% else %}
       <input type="password" id="{{ key }}" name="{{ key }}" autocomplete="new-password" placeholder="{{ 'Saved: leave empty to keep it' if info.status == 'set' else placeholder }}">
       <span class="hint">

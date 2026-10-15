@@ -35,6 +35,8 @@ First public release, under the AGPL-3.0.
 - The sign-in page has a background of drifting asset tags (a mix of 18, 12 and 6 mm sizes) in your accent colour, and no longer shows the version or a separate footer. Signed-in pages show a faint, still version of the same background ([#16](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/16)).
 - Batches print as one strip with cut lines by default; each browser remembers if you choose **Cut each label** instead ([#14](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/14)). The choice is also on the **Print a batch** page and carries through to printing ([#15](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/15)).
 - Code quality: Ruff linting and formatting, each test runs against its own database, coverage raised to over 80% and checked in CI, local development uses Python 3.14 like the Docker image, and the app's routes are split into one module per area with a shared database helper and settings read once per request ([#10](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/10)).
+- On phones, the top navigation folds behind a **Menu** button, and pages use the full width.
+- Better contrast: form field borders, and the green and amber status colours in light mode, now meet WCAG AA; keyboard focus is visible on the dark header ([#10](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/10)).
 - Updated to Python 3.14, FastAPI 0.143, Starlette 1.8, uvicorn 0.54, Authlib 1.8, Pillow 12.3 and httpx 0.28.
 
 ### Fixed

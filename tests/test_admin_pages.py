@@ -116,3 +116,9 @@ def test_duplicate_username_is_refused(conn):
     r = c.post("/users/new", data=form, follow_redirects=True)
     assert "already exists" in r.text
     assert conn.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 1
+
+
+def test_old_chain_column_is_dropped(conn):
+    conn.execute("ALTER TABLE printers ADD COLUMN chain INTEGER NOT NULL DEFAULT 0")
+    db.init()
+    assert "chain" not in {r["name"] for r in conn.execute("PRAGMA table_info(printers)")}
