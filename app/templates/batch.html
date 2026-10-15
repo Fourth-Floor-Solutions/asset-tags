@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Print a batch{% endblock %}
 {% block main %}
-<div class="head"><div><h1>Print a batch</h1><p class="muted">Issue blank tags for one client, for example before a site visit to tag existing kit. Scan each tag once it's on a device to record what it's on.</p></div></div>
+<div class="head"><div><h1>Print a batch</h1><p class="muted">Issue blank tags for one client, for example before a site visit to tag existing kit. Scan each tag once it's stuck on a device to assign it.</p></div></div>
 {% if error %}<div class="flash bad">{{ error }}</div>{% endif %}
 <form class="card stack" method="post" action="/tags/batch" data-format-guard>
   <div class="row">

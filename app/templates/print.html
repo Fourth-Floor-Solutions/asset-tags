@@ -59,7 +59,7 @@
   </div>
   <div class="screen flash" id="send-result" hidden></div>
   {% endif %}
-  {% if batch %}<div class="screen flash ok">Issued {{ items|length }} tags for {{ items[0].tag.client_name }}. Once each is on a device, scan it with your phone to record what it's on.</div>{% endif %}
+  {% if batch %}<div class="screen flash ok">Issued {{ items|length }} tags for {{ items[0].tag.client_name }}. Once each is stuck on a device, scan it with your phone to assign it to that device.</div>{% endif %}
   <p class="screen flash warn" id="fit-warn" hidden>A client name is too long for its tape and has been squeezed. An admin can set a shorter label name on the Clients page.</p>
   <div class="screen flash bad" id="print-err" hidden></div>
   <div class="sheet">
