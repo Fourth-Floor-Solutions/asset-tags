@@ -4,6 +4,17 @@ What changed in TagDesk, newest first. Everything that changed on the same
 day is listed under that one date, with any versions released that day in
 the heading. Versions follow [semantic versioning](https://semver.org).
 
+## 16 October 2026 · v0.2.0
+
+### Added
+- **Coverage**: how many of each client's devices in Hudu have a tag, which ones still need one, and which tags aren't linked to a device. **Tag this device** opens Tag a device with the Hudu asset already filled in, the untagged list can be exported as CSV for an engineer to take to site, and admins choose which Hudu asset types count. Fetched from Hudu on **Refresh**; nothing is written to Hudu ([#33](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/33)).
+
+### Changed
+- Every Hudu feature is only shown and available while Hudu is set up (address and API key): the Coverage page, the asset picker, client sync, writing tag codes, the archive check, **Open in Hudu** and the Hudu column on the Clients page.
+
+### Fixed
+- Editing a tag while Hudu wasn't set up removed the tag's link to its Hudu asset.
+
 ## 15 October 2026 · v0.1.0
 
 First public release, under the AGPL-3.0.

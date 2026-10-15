@@ -73,7 +73,13 @@ def tag_new_form(request: Request, client_id: str = ""):
     auth.require_user(request)
     with db.connection() as conn:
         cl = clients(conn)
-    return page(request, "tag_new.html", clients=cl, sel_client=client_id, form={})
+    # Prefilled from coverage's "Tag this device"; the Hudu link only while Hudu is set up.
+    q = request.query_params
+    form = {k: clean(q.get(k), 120) for k in ("device_name", "model", "serial") if q.get(k)}
+    if hudu.configured() and (q.get("hudu_asset_id") or "").isdigit():
+        form["hudu_asset_id"] = q["hudu_asset_id"]
+        form["hudu_asset_url"] = hudu_link(q.get("hudu_asset_url") or "")
+    return page(request, "tag_new.html", clients=cl, sel_client=client_id, form=form)
 
 
 @router.post("/tags/new")
@@ -223,6 +229,9 @@ def tag_update(
             "hudu_asset_id": int(hudu_asset_id) if hudu_asset_id.isdigit() else None,
             "hudu_asset_url": hudu_link(hudu_asset_url) if hudu_asset_id.isdigit() else "",
         }
+        if not hudu.configured():
+            # The asset picker is hidden while Hudu is off: keep the tag's existing link.
+            new["hudu_asset_id"], new["hudu_asset_url"] = tag["hudu_asset_id"], tag["hudu_asset_url"]
         changes = []
         for k, v in new.items():
             if (tag[k] or None) != (v or None):
@@ -292,6 +301,7 @@ def tag_status(request: Request, code: str, status: str = Form(...), reason: str
 def tag_keep_retired(request: Request, code: str):
     """The Hudu asset was unarchived, but the tag should stay retired."""
     user = auth.require_user(request)
+    hudu.require()
     with db.connection() as conn:
         tag = db.get_tag(conn, code)
         if tag and tag["status"] == "retired" and tag["hudu_state"] == "unarchived":
@@ -303,9 +313,7 @@ def tag_keep_retired(request: Request, code: str):
 @router.post("/hudu/archive-check")
 def hudu_archive_check(request: Request):
     auth.require_admin(request)
-    if not hudu.configured():
-        flash(request, "Hudu isn't set up.", "bad")
-        return go("/clients")
+    hudu.require()
     with db.connection() as conn:
         s = hudu_archive.run(conn)
     if s.get("skipped"):
@@ -326,6 +334,7 @@ def hudu_archive_check(request: Request):
 @router.post("/tags/{code}/hudu")
 def tag_hudu(request: Request, code: str):
     user = auth.require_user(request)
+    hudu.require()
     with db.connection() as conn:
         err = hudu_sync(conn, code, auth.label(user), force=True)
         tag = db.get_tag(conn, code)
@@ -339,6 +348,7 @@ def tag_hudu(request: Request, code: str):
 @router.post("/hudu/sync-all")
 def hudu_sync_all(request: Request):
     user = auth.require_admin(request)
+    hudu.require()
     if not hudu.write_enabled():
         flash(request, "Writing to Hudu is switched off (HUDU_WRITE isn't 1).", "bad")
         return go("/clients")
@@ -362,6 +372,7 @@ def hudu_sync_all(request: Request):
 @router.get("/api/hudu/assets")
 def hudu_assets(request: Request, client_id: int, q: str = ""):
     auth.require_user(request)
+    hudu.require()
     with db.connection() as conn:
         c = conn.execute("SELECT hudu_id FROM clients WHERE id = ?", (client_id,)).fetchone()
     if not c or not c["hudu_id"]:

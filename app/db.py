@@ -82,6 +82,14 @@ CREATE TABLE IF NOT EXISTS cassettes (
   UNIQUE(printer_id, tape)
 );
 
+-- Tag coverage: each client's Hudu assets as last fetched (JSON), so pages don't call Hudu.
+CREATE TABLE IF NOT EXISTS coverage (
+  client_id INTEGER PRIMARY KEY REFERENCES clients(id) ON DELETE CASCADE,
+  refreshed_at TEXT NOT NULL,
+  assets TEXT NOT NULL DEFAULT '[]',
+  error TEXT NOT NULL DEFAULT ''
+);
+
 CREATE TABLE IF NOT EXISTS audit (
   id INTEGER PRIMARY KEY,
   at TEXT NOT NULL,
