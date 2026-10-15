@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import re
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 
-from .. import auth, db, hudu, labels, printer, settings
+from .. import auth, backup, db, hudu, labels, printer, secretbox, settings
 from ..tagops import (
     clients,
     label_text,
@@ -102,6 +103,41 @@ def _settings_page(request: Request, setup: bool, error: str = "", form: dict | 
         env_names=settings.ENV_WINS,
         secrets={k: settings.secret_info(k) for k in settings.SECRET_KEYS},
         audit=settings.recent_audit(),
+        backups=backup.list_daily(),
+        backup_keep=backup.keep(),
+        key_in_env=bool(os.environ.get("TAGDESK_SECRET_KEY", "").strip()),
+    )
+
+
+@router.get("/settings/backup/tagdesk.db")
+def backup_download(request: Request):
+    user = auth.require_admin(request)
+    data = backup.to_bytes()
+    settings.audit(auth.label(user), "backup", "downloaded the database")
+    return Response(
+        data,
+        media_type="application/vnd.sqlite3",
+        headers={
+            "Content-Disposition": f'attachment; filename="tagdesk-{db.now()[:10]}.db"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@router.get("/settings/backup/secret.key")
+def backup_key_download(request: Request):
+    """The key that decrypts saved secrets, kept outside the database. Not offered when it's set in .env."""
+    user = auth.require_admin(request)
+    if os.environ.get("TAGDESK_SECRET_KEY", "").strip():
+        return go("/settings#backup")
+    secretbox.encrypt("")  # makes sure the key file exists
+    with open(os.path.join(db.DATA_DIR, secretbox.KEY_FILE), "rb") as f:
+        data = f.read()
+    settings.audit(auth.label(user), "backup", "downloaded secret.key")
+    return Response(
+        data,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": 'attachment; filename="secret.key"', "Cache-Control": "no-store"},
     )
 
 
