@@ -50,6 +50,7 @@ First public release, under the AGPL-3.0.
 - The selection bar on the Tags list showed "0 selected" when nothing was ticked.
 - Fields on the Settings page that share a row didn't line up ([#17](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/17)).
 - The Settings page's browser tab title included stray page content.
+- On the Users page, the **Set** buttons wrapped under their fields and rows didn't line up.
 
 ### Security
 - Failed sign-ins are limited per IP address, and only the reverse proxy may pass on the visitor's IP.

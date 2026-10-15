@@ -8,16 +8,16 @@
   <tbody>
   {% for u in users %}
   <tr>
-    <td>{{ u.username }}{% if u.id == user.id %} <span class="pill">You</span>{% endif %}</td>
-    <td><form method="post" action="/users/{{ u.id }}/name" class="actions">
-      <input type="text" name="name" value="{{ u.display_name }}" maxlength="80" placeholder="Full name" aria-label="Name for {{ u.username }}" style="max-width:180px">
+    <td class="nowrap">{{ u.username }}{% if u.id == user.id %} <span class="pill">You</span>{% endif %}</td>
+    <td><form method="post" action="/users/{{ u.id }}/name" class="inline-set">
+      <input type="text" name="name" value="{{ u.display_name }}" maxlength="80" placeholder="Full name" aria-label="Name for {{ u.username }}">
       <button class="quiet" type="submit">Set</button></form></td>
     <td>{{ u.email or '—' }}</td>
-    <td><form method="post" action="/users/{{ u.id }}/role" class="actions">
-      <select name="role" aria-label="Role for {{ u.username }}" style="width:auto">{% for r in ['user','admin'] %}<option {{ 'selected' if u.role == r }}>{{ r }}</option>{% endfor %}</select>
+    <td><form method="post" action="/users/{{ u.id }}/role" class="inline-set">
+      <select name="role" aria-label="Role for {{ u.username }}">{% for r in ['user','admin'] %}<option {{ 'selected' if u.role == r }}>{{ r }}</option>{% endfor %}</select>
       <button class="quiet" type="submit">Set</button></form></td>
-    <td><form method="post" action="/users/{{ u.id }}/password" class="actions">
-      <input type="password" name="password" minlength="12" placeholder="{{ 'New password' if u.password else 'Microsoft only' }}" aria-label="New password for {{ u.username }}" autocomplete="new-password" style="max-width:180px">
+    <td><form method="post" action="/users/{{ u.id }}/password" class="inline-set">
+      <input type="password" name="password" minlength="12" placeholder="{{ 'New password' if u.password else 'Microsoft only' }}" aria-label="New password for {{ u.username }}" autocomplete="new-password">
       <button class="quiet" type="submit">Set</button></form></td>
     <td>{% if u.id != user.id %}<form method="post" action="/users/{{ u.id }}/delete"><button class="danger" type="submit">Delete</button></form>{% endif %}</td>
   </tr>
@@ -33,6 +33,6 @@
     <div class="field"><label for="nu_role">Role</label><select id="nu_role" name="role"><option>user</option><option>admin</option></select></div>
     <div class="field"><label for="nu_pw">Password</label><input type="password" id="nu_pw" name="password" minlength="12" autocomplete="new-password" placeholder="Leave empty for Microsoft only"></div>
   </div>
-  <div class="actions"><button type="submit">Add user</button></div>
+  <div class="inline-set"><button type="submit">Add user</button></div>
 </form>
 {% endblock %}
