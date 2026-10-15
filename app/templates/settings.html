@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Set up' if setup else 'Settings' }}{% endblock %}
+{% block main %}
+<div class="head"><div>
+  <h1>{{ 'Set up Asset Tags' if setup else 'Settings' }}</h1>
+  <p class="muted">{% if setup %}Tell the app who you are. This goes on every label and on the page people see when they scan a tag. You can change all of it later under Settings.{% else %}How the app presents your organisation, and how it connects to Hudu and Microsoft sign-in.{% endif %}</p>
+</div></div>
+{% if error %}<div class="flash bad">{{ error }}</div>{% endif %}
+
+<form class="stack" method="post" action="/settings">
+  {% if setup %}<input type="hidden" name="setup" value="1">{% endif %}
+
+  <div class="card stack">
+    <h2>Your organisation</h2>
+    <div class="row">
+      <div class="field"><label for="org_name">Full name</label><input type="text" id="org_name" name="org_name" value="{{ s.org_name if s.org_name != 'Your organisation' or not setup else '' }}" maxlength="80" required placeholder="Acme IT Services Ltd">
+        <span class="hint">Used on the public scan page and in "Managed by …".</span></div>
+      <div class="field"><label for="org_short">Short name</label><input type="text" id="org_short" name="org_short" value="{{ s.org_short if s.org_short != 'Your organisation' or not setup else '' }}" maxlength="40" placeholder="Acme IT">
+        <span class="hint">Used where space is tight, like loan tags. Leave empty to use the full name.</span></div>
+      <div class="field"><label for="org_mark">Mark</label><input type="text" id="org_mark" name="org_mark" value="{{ s.org_mark }}" maxlength="3" required style="max-width:90px">
+        <span class="hint">1–3 characters, for the logo square and micro tags.</span></div>
+      <div class="field"><label for="accent">Accent colour</label><input type="color" id="accent" name="accent" value="{{ s.accent }}" style="max-width:90px;height:40px;padding:2px">
+        <span class="hint">Buttons and highlights in the app.</span></div>
+    </div>
+  </div>
+
+  <div class="card stack">
+    <h2>Support contact</h2>
+    <p class="muted small">Shown on the page someone sees when they scan a tag without signing in.</p>
+    <div class="row">
+      <div class="field"><label for="support_phone">Phone</label><input type="text" id="support_phone" name="support_phone" value="{{ s.support_phone }}" maxlength="40" placeholder="+44 (0)20 0000 0000"></div>
+      <div class="field"><label for="support_email">Email</label><input type="email" id="support_email" name="support_email" value="{{ s.support_email }}" maxlength="120" placeholder="support@example.com"></div>
+    </div>
+  </div>
+
+  <div class="card stack">
+    <h2>Label wording</h2>
+    <p class="muted small">Use <code>{name}</code> for the full name, <code>{short}</code> for the short name, <code>{SHORT}</code> for it in capitals.</p>
+    <div class="row">
+      <div class="field"><label for="label_managed">Bottom line on client tags</label><input type="text" id="label_managed" name="label_managed" value="{{ s.label_managed }}" maxlength="60"></div>
+      <div class="field"><label for="label_loan_top">Top line on loan tags</label><input type="text" id="label_loan_top" name="label_loan_top" value="{{ s.label_loan_top }}" maxlength="40"></div>
+      <div class="field"><label for="label_loan_bottom">Bottom line on loan tags</label><input type="text" id="label_loan_bottom" name="label_loan_bottom" value="{{ s.label_loan_bottom }}" maxlength="60"></div>
+    </div>
+    {% if preview %}<p class="small muted">Currently prints: “{{ preview.managed }}” · loan: “{{ preview.loan_top }}” / “{{ preview.loan_bottom }}”.</p>{% endif %}
+    <div class="field"><label for="internal_client_id">Your organisation's client</label>
+      <select id="internal_client_id" name="internal_client_id" style="max-width:420px">
+        <option value="new" {{ 'selected' if not s.internal_client_id }}>Create one named after your organisation</option>
+        {% for c in clients %}<option value="{{ c.id }}" {{ 'selected' if s.internal_client_id == c.id|string }}>{{ c.name }}</option>{% endfor %}
+      </select>
+      <span class="hint">Loan tags can only be issued against this client: kit you own and lend out.</span></div>
+  </div>
+
+  {% if not setup %}
+  <div class="card stack">
+    <h2>Label formats</h2>
+    <input type="hidden" name="formats_shown" value="1">
+    <p class="muted small">Sizes are fixed: each layout is drawn for its tape width. Choose which formats people can use and the tape you load for each. The app checks the cassette colour before printing unless you choose <i>any colour</i>. Text always prints black.</p>
+    <div class="tbl">
+    <table class="fmt-table">
+      <thead><tr><th>On</th><th>Format</th><th>Size</th><th>Tape colour</th><th>Tape shown to users</th></tr></thead>
+      <tbody>
+      {% for key, f in formats.items() %}
+      <tr>
+        <td><input type="checkbox" name="fmt_{{ key }}_enabled" value="1" {{ 'checked' if f.enabled }} aria-label="{{ f.name }} on"></td>
+        <td><b>{{ f.name }}</b><br><span class="small muted">{{ f.use }}</span></td>
+        <td class="nowrap">{{ f.width }}×{{ f.height }} mm</td>
+        <td><select name="fmt_{{ key }}_colour" aria-label="{{ f.name }} tape colour" style="width:auto">
+          {% for c in tape_colours %}<option value="{{ c }}" {{ 'selected' if f.tape_colour == c }}>{{ 'any colour' if c == 'any' else c }}</option>{% endfor %}
+        </select> <i class="swatch" style="background: {{ tape_fill(key) }}"></i></td>
+        <td><input type="text" name="fmt_{{ key }}_tape" value="{{ f.tape }}" maxlength="80" aria-label="{{ f.name }} tape description"></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card stack">
+    <h2>Hudu</h2>
+    <p class="muted small">Optional. Links tags to Hudu assets and syncs your client list. The API key goes in the server's <code>.env</code> as <code>HUDU_API_KEY</code>: {% if env.hudu_key %}<span class="pill active">set</span>{% else %}<span class="pill unassigned">not set</span>{% endif %}</p>
+    <div class="row">
+      <div class="field"><label for="hudu_url">Hudu address</label><input type="url" id="hudu_url" name="hudu_url" value="{{ s.hudu_url }}" placeholder="https://hudu.example.com"></div>
+      <div class="field"><label for="hudu_tag_field">Asset field for the tag code</label><input type="text" id="hudu_tag_field" name="hudu_tag_field" value="{{ s.hudu_tag_field }}" maxlength="60"></div>
+    </div>
+    <label class="small" style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" name="hudu_write" value="1" {{ 'checked' if s.hudu_write == '1' }}>
+      <span>Write each tag's code into the linked Hudu asset. The field must exist on the asset layout; see the README for the script that adds it.</span></label>
+  </div>
+
+  <div class="card stack">
+    <h2>Microsoft sign-in</h2>
+    <p class="muted small">The tenant, client ID and secret go in the server's <code>.env</code> (<code>ENTRA_TENANT_ID</code>, <code>ENTRA_CLIENT_ID</code>, <code>ENTRA_CLIENT_SECRET</code>). Status: {% if env.sso %}<span class="pill active">on</span>{% else %}<span class="pill unassigned">off</span>{% endif %}. Redirect URI: <code>{{ env.public_url }}/auth/callback</code></p>
+    <div class="field"><label for="sso_auto_domains">Give these email domains an account on first sign-in</label><input type="text" id="sso_auto_domains" name="sso_auto_domains" value="{{ s.sso_auto_domains }}" placeholder="example.com, example.co.uk">
+      <span class="hint">New people from these domains get the "user" role. Anyone else needs adding on the Users page first.</span></div>
+  </div>
+
+  <div class="card">
+    <dl class="meta"><dt>Public address</dt><dd class="mono small">{{ env.public_url }}</dd></dl>
+    <p class="hint">Printed into every QR code. Set as <code>PUBLIC_BASE_URL</code> in <code>.env</code>; choose it before printing real tags.</p>
+  </div>
+
+  <div class="actions"><button class="primary" type="submit">{{ 'Save and continue' if setup else 'Save settings' }}</button></div>
+</form>
+{% endblock %}

@@ -1,0 +1,11 @@
+<div class="formats" role="radiogroup" aria-label="Label format">
+  {% for key, f in formats.items() if f.enabled or sel_format == key %}
+  <label>
+    <input type="radio" name="format" value="{{ key }}" {{ 'checked' if sel_format == key }}>
+    <b>{{ f.name }} · {{ f.width }}×{{ f.height }} mm</b>
+    <span>{{ f.use }}{% if not f.enabled %} · switched off{% endif %}</span>
+    <i class="swatch" style="background: {{ tape_fill(key) }}" title="{{ f.tape }}"></i>
+  </label>
+  {% endfor %}
+</div>
+<p class="flash bad" data-loan-note hidden>Loan tags are only for {{ org.org_name }}'s own kit. Choose your organisation's client.</p>

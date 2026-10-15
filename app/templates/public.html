@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ code }}{% endblock %}
+{% block main %}
+<div class="card narrow" style="margin-top:4vh">
+  <div class="brand"><span class="brand-mark">{{ org.org_mark }}</span> {{ org.org_name }}</div>
+  <div class="big-code">{{ code }}</div>
+  {% if tag and tag.device_name %}<p class="device-name">{{ tag.device_name }}</p>{% endif %}
+  {% if tag and tag.format == 'loan' %}
+    <h1>This is a {{ org.org_name }} loan device</h1>
+    <p>If you've found it or no longer need it, please get in touch so we can collect it.</p>
+  {% elif tag %}
+    <h1>This equipment belongs to {{ owner }}</h1>
+    <p>It's managed by {{ org.org_name }}. If it's faulty, lost or in the wrong place, contact us and quote the code above.</p>
+  {% else %}
+    <h1>We don't recognise this code</h1>
+    <p>Check the code on the label. If you still need help, contact {{ org.org_name }}.</p>
+  {% endif %}
+  {% if support_phone or support_email %}
+  <dl class="meta">
+    {% if support_phone %}<dt>Phone</dt><dd><a href="tel:{{ support_tel }}">{{ support_phone }}</a></dd>{% endif %}
+    {% if support_email %}<dt>Email</dt><dd><a href="mailto:{{ support_email }}?subject=Asset%20{{ code }}">{{ support_email }}</a></dd>{% endif %}
+  </dl>
+  {% endif %}
+  <p class="small muted"><a href="/login?next=/tags/{{ code }}">{{ org.org_short }} staff sign in</a></p>
+</div>
+{% endblock %}

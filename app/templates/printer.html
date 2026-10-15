@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Label printers{% endblock %}
+{% block main %}
+<div class="head">
+  <div><h1>Label printers</h1>
+    <p class="muted">Each label goes to the first printer with the right tape loaded, starting with the default.</p></div>
+  <div class="actions"><a class="btn quiet" href="/printer">Refresh</a></div>
+</div>
+
+{% if not pstats %}
+<div class="card"><h2>No printers yet</h2><p>{% if user.role == 'admin' %}Add the PT-P950NW below with its IP address.{% else %}Ask an admin to add the label printer.{% endif %}</p></div>
+{% endif %}
+
+{% for x in pstats %}{% set p = x.p %}{% set st = x.st %}
+<div class="card">
+  <div class="head">
+    <div><h2>{{ p.name }}{% if p.is_default %} <span class="pill fmt">Default</span>{% endif %}</h2>
+      <p class="muted small mono">{{ p.host }}{% if st %} · {{ st.model }}{% endif %}</p></div>
+    <div class="actions">
+      <form method="post" action="/printers/{{ p.id }}/test"><button type="submit" {{ 'disabled' if not x.fits or (st and st.errors) }}>Print a test label</button></form>
+      {% if user.role == 'admin' and not p.is_default %}<form method="post" action="/printers/{{ p.id }}/default"><button class="quiet" type="submit">Make default</button></form>{% endif %}
+    </div>
+  </div>
+  {% if x.err %}<div class="flash bad">{{ x.err }}</div>
+  {% else %}
+  <dl class="meta">
+    <dt>Status</dt><dd>{% if st.errors %}<span class="pill reprint">{{ st.errors|join(', ') }}</span>{% elif st.busy %}<span class="pill unassigned">Busy</span>{% else %}<span class="pill active">Ready</span>{% endif %}</dd>
+    <dt>Tape loaded</dt><dd>{% if st.tape_mm %}{{ st.tape_mm }} mm · {{ st.tape_colour }}{{ '' if st.laminated else ' · not laminated' }}{% else %}None{% endif %}</dd>
+    {% set c = x.cassette %}{% if c %}
+    <dt>Cassette</dt><dd>
+      <div class="tapebar{{ ' low' if c.low }}" role="img" aria-label="{{ c.pct }}% used"><span style="width:{{ c.pct }}%"></span></div>
+      About <b>{{ '%.1f'|format(c.left_cm / 100) }} m left</b> of {{ '%g'|format(c.length_cm / 100) }} m
+      {% if c.fmt_name %}· roughly {{ c.labels_single }} {{ c.fmt_name }} labels printed one at a time, or {{ c.labels_batch }} in batches{% endif %}
+      {% if c.estimated %}<br><span class="hint">Tracking started part-way through this cassette ({{ '%.1f'|format(c.used_cm / 100) }} m counted so far). Set how much was already used, or press New cassette fitted when you change it.</span>{% endif %}
+      <div class="actions" style="margin-top:8px">
+        <form method="post" action="/cassettes/{{ c.id }}/new"><button class="quiet" type="submit">New cassette fitted</button></form>
+        <details><summary class="small">Set used / length</summary>
+          <form class="filters" method="post" action="/cassettes/{{ c.id }}" style="margin-top:6px">
+            <label class="small" for="used{{ c.id }}">Used (m)</label><input type="number" step="0.1" min="0" id="used{{ c.id }}" name="used_m" value="{{ '%.1f'|format(c.used_cm / 100) }}" style="max-width:90px">
+            <label class="small" for="len{{ c.id }}">Length (m)</label><input type="number" step="0.5" min="1" id="len{{ c.id }}" name="length_m" value="{{ '%g'|format(c.length_cm / 100) }}" style="max-width:90px">
+            <button class="quiet" type="submit">Set</button>
+          </form></details>
+      </div></dd>
+    {% endif %}
+    <dt>Prints now</dt><dd>{% if x.fits %}{% for f in x.fits %}<span class="pill tape" style="background: {{ tape_fill(f) }}">{{ formats[f].name }}</span> {% endfor %}{% else %}No tag format fits this tape{% endif %}</dd>
+  </dl>
+  {% endif %}
+  {% if user.role == 'admin' %}
+  <details>
+    <summary class="small">Edit name, address or print position</summary>
+    <form class="stack" method="post" action="/printers/{{ p.id }}" style="margin-top:10px">
+      <div class="row">
+        <div class="field"><label for="name{{ p.id }}">Name</label><input type="text" id="name{{ p.id }}" name="name" value="{{ p.name }}" maxlength="60" required></div>
+        <div class="field"><label for="addr{{ p.id }}">Address</label><input type="text" id="addr{{ p.id }}" name="address" value="{{ p.host }}" autocomplete="off" spellcheck="false" required></div>
+        <div class="field"><label for="dots{{ p.id }}">Vertical position (dots)</label><input type="number" id="dots{{ p.id }}" name="dots" value="{{ p.nudge_dots }}" min="-40" max="40" step="1"></div>
+      </div>
+      <span class="hint">Position: 14 dots ≈ 1 mm; negative moves the print down, positive up. Now {% if p.nudge_dots == 0 %}as Brother specifies{% else %}{{ x.nudge_mm }} mm {{ 'down' if p.nudge_dots < 0 else 'up' }}{% endif %}.</span>
+      <div class="actions">
+        <button type="submit" class="primary">Save</button>
+        <button type="submit" name="then" value="test">Save and print a test</button>
+      </div>
+    </form>
+    <form method="post" action="/printers/{{ p.id }}/delete" style="margin-top:10px"><button class="danger" type="submit">Remove {{ p.name }}</button></form>
+  </details>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% if user.role == 'admin' %}
+<form class="card stack" method="post" action="/printers/new">
+  <h2>Add a printer</h2>
+  <div class="row">
+    <div class="field"><label for="new_name">Name</label><input type="text" id="new_name" name="name" maxlength="60" placeholder="Workshop PT-P950NW" required></div>
+    <div class="field"><label for="new_addr">Address</label><input type="text" id="new_addr" name="address" placeholder="192.168.1.51" autocomplete="off" spellcheck="false" required></div>
+  </div>
+  <span class="hint">A Brother PT-P950NW or PT-P900W on your network. The app checks it answers when you save. Give it a DHCP reservation so the address doesn't change.</span>
+  <div class="actions"><button type="submit">Add printer</button></div>
+</form>
+{% endif %}
+
+<div class="card">
+  <h2>Which tape for which tag</h2>
+  <dl class="meta">{% for k, f in enabled_formats.items() %}<dt>{{ f.name }}</dt><dd>{{ f.tape }}</dd>{% endfor %}</dl>
+</div>
+{% endblock %}

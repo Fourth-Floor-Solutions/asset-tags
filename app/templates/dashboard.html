@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Tags{% endblock %}
+{% block main %}
+<div class="head">
+  <h1>Tags</h1>
+  <div class="actions"><a class="btn primary" href="/tags/new">Tag a device</a><a class="btn" href="/tags/batch">Print a batch</a></div>
+</div>
+<div class="stats">
+  <a class="stat" href="/?status=active"><b>{{ counts.get('active', 0) }}</b><span>On devices</span></a>
+  <a class="stat" href="/?status=unassigned"><b>{{ counts.get('unassigned', 0) }}</b><span>Printed, not yet on a device</span></a>
+  <a class="stat" href="/?status=retired"><b>{{ counts.get('retired', 0) }}</b><span>Retired</span></a>
+  {% if reprint_count %}<a class="stat alert" href="#reprint"><b>{{ reprint_count }}</b><span>Need a new label</span></a>{% endif %}
+</div>
+<form class="filters" method="get" action="/">
+  <input type="search" name="q" value="{{ q }}" placeholder="Code, serial, device name, model or client" aria-label="Search tags">
+  <select name="client_id" aria-label="Client">
+    <option value="">All clients</option>
+    {% for c in clients %}<option value="{{ c.id }}" {{ 'selected' if client_id == c.id|string }}>{{ c.name }}</option>{% endfor %}
+  </select>
+  <select name="status" aria-label="Status">
+    <option value="">Any status</option>
+    {% for s, label in [('active','On a device'),('unassigned','Not on a device'),('retired','Retired')] %}<option value="{{ s }}" {{ 'selected' if status == s }}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="quiet" type="submit">Filter</button>
+  {% if q or client_id or status %}<a class="btn quiet" href="/">Clear</a>{% endif %}
+</form>
+{% if tags %}
+<div class="select-bar" id="select-bar" hidden>
+  <span id="pick-count"></span>
+  {% if printer_on %}<select id="strip-mode" aria-label="How to cut a batch" class="strip-opt">
+    <option value="cut">Cut each label</option>
+    <option value="strip">One strip, cut them yourself</option>
+  </select>
+  <button class="primary" type="button" id="print-selected">Print selected</button>{% endif %}
+  <a class="btn quiet" id="preview-selected" href="/print">Open print page</a>
+</div>
+<div class="flash" id="select-result" role="status" hidden></div>
+<div class="tbl" id="reprint">
+<table>
+  <thead><tr><th><input type="checkbox" id="pick-all" aria-label="Select all tags shown"></th><th>Tag</th><th>Client</th><th>Device</th><th>Model</th><th>Serial</th><th>Format</th><th>Status</th><th>Updated</th></tr></thead>
+  <tbody>
+  {% for t in tags %}
+  <tr>
+    <td><input type="checkbox" name="pick" value="{{ t.code }}" aria-label="Select {{ t.code }}" {{ 'disabled' if t.status == 'retired' }}></td>
+    <td class="code"><a href="/tags/{{ t.code }}">{{ t.code }}</a></td>
+    <td>{{ t.client_name }}</td>
+    <td>{{ t.device_name or '—' }}</td>
+    <td>{{ t.model or '—' }}</td>
+    <td class="mono small">{{ t.serial or '—' }}</td>
+    <td><span class="pill tape" style="background: {{ tape_fill(t.format) }}">{{ formats[t.format].name }}</span></td>
+    <td class="nowrap"><span class="pill {{ t.status }}">{{ {'active':'On device','unassigned':'Not on device','retired':'Retired'}[t.status] }}</span>
+      {% if not t.printed_count and t.status != 'retired' %}<span class="pill reprint">Not printed</span>
+      {% elif needs_reprint(t) %}<span class="pill reprint">Reprint</span>{% endif %}</td>
+    <td class="small muted nowrap">{{ t.updated_at[:10] }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% elif q or client_id or status %}
+<div class="card"><p>No tags match. Try a different search, or <a href="/">clear the filters</a>.</p></div>
+{% else %}
+<div class="card"><h2>No tags yet</h2><p>Start with <a href="/tags/new">Tag a device</a> for one device, or <a href="/tags/batch">Print a batch</a> to tag a whole site. Admins should first <a href="/clients">sync clients from Hudu</a> and check their label names.</p></div>
+{% endif %}
+{% endblock %}

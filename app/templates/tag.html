@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ tag.code }}{% endblock %}
+{% block main %}
+<div class="head">
+  <div>
+    <div class="big-code">{{ tag.code }}</div>
+    <p class="muted">{{ tag.client_name }}{% if tag.device_name %} · {{ tag.device_name }}{% endif %}</p>
+  </div>
+  <div class="actions">
+    {% if printer_on %}
+    <button class="primary" type="button" data-print-direct="{{ tag.code }}" data-out="print-result" data-reload="1">{{ 'Print label again' if tag.printed_count else 'Print label' }}</button>
+    <a class="btn quiet" href="/print?codes={{ tag.code }}">Print page</a>
+    {% else %}
+    <a class="btn primary" href="/print?codes={{ tag.code }}">{{ 'Print again' if tag.printed_count else 'Print' }}</a>
+    {% endif %}
+    {% if tag.hudu_asset_url %}<a class="btn" href="{{ tag.hudu_asset_url }}" target="_blank" rel="noopener">Open in Hudu</a>{% endif %}
+  </div>
+</div>
+<div class="flash" id="print-result" role="status" hidden></div>
+{% if not tag.printed_count %}<div class="flash warn">This tag hasn't been printed yet.</div>
+{% elif reprint %}<div class="flash warn">The printed label no longer matches (client, label name or format changed). Print a replacement and swap it on the device.</div>{% endif %}
+{% if tag.status == 'retired' %}<div class="flash bad">Retired. This tag is no longer on a device in service.</div>{% endif %}
+<div class="grid2">
+  <div class="card">
+    <div class="preview">{{ svg|safe }}</div>
+    <p class="flash warn" id="fit-warn" hidden>The client's label name is too long for this tape, so it's squeezed. An admin can set a shorter label name on the Clients page.</p>
+    <dl class="meta">
+      <dt>Status</dt><dd><span class="pill {{ tag.status }}">{{ {'active':'On a device','unassigned':'Not on a device yet','retired':'Retired'}[tag.status] }}</span></dd>
+      <dt>Tape</dt><dd>{{ formats[tag.format].tape }} · {{ formats[tag.format].width }}×{{ formats[tag.format].height }} mm</dd>
+      <dt>QR opens</dt><dd class="mono small">{{ qr_url }}</dd>
+      <dt>Printed</dt><dd>{% if tag.printed_count %}{{ tag.printed_count }}× · last {{ tag.printed_at[:16]|replace('T', ' ') }} UTC{% else %}Not yet{% endif %}</dd>
+      {% if hudu_write and (tag.hudu_asset_id or tag.hudu_pushed_asset_id) %}
+      <dt>Hudu field</dt><dd>{% set hs = tag.hudu_sync_status or 'not written yet' %}
+        <span class="pill {{ 'active' if hs.startswith(('written','cleared','already')) else ('reprint' if hs.startswith('error') else 'unassigned') }}">{{ hudu_field }}</span>
+        {{ hs }}{% if tag.hudu_sync_at %} <span class="muted small">· {{ tag.hudu_sync_at[:16]|replace('T', ' ') }} UTC</span>{% endif %}
+        <form method="post" action="/tags/{{ tag.code }}/hudu" style="display:inline"><button class="quiet" type="submit" style="padding:2px 8px;font-size:12px">Write to Hudu</button></form></dd>
+      {% endif %}
+      <dt>Issued</dt><dd>{{ tag.created_at[:10] }} by {{ tag.created_by }}</dd>
+    </dl>
+    <h2>History</h2>
+    <ul class="history">
+      {% for e in events %}<li><time>{{ e.at[:16]|replace('T', ' ') }}</time><span><b>{{ e.action|capitalize }}</b> by {{ e.actor }}{% if e.detail %} · {{ e.detail }}{% endif %}</span></li>{% endfor %}
+    </ul>
+  </div>
+  <div class="card">
+    <h2>{{ 'What is this tag on?' if tag.status == 'unassigned' else 'Device' }}</h2>
+    <form class="stack" method="post" action="/tags/{{ tag.code }}" data-format-guard>
+      <div class="field"><label for="client_id">Client</label>{% set sel_client = tag.client_id %}{% include "_client_select.html" %}
+        <span class="hint">Changing the client means printing a new label. The code and history stay the same.</span></div>
+      <div class="field"><span class="lbl">Label format</span>{% set sel_format = tag.format %}{% include "_formats.html" %}</div>
+      {% set form = tag %}{% include "_device_fields.html" %}
+      <div class="actions"><button class="primary" type="submit">Save</button></div>
+    </form>
+    <form class="actions" method="post" action="/tags/{{ tag.code }}/status">
+      {% if tag.status == 'retired' %}
+        <input type="hidden" name="status" value="{{ 'active' if tag.serial or tag.device_name else 'unassigned' }}">
+        <button class="quiet" type="submit">Restore tag</button>
+      {% else %}
+        <input type="hidden" name="status" value="retired">
+        <input type="text" name="reason" id="reason" placeholder="Reason, e.g. disposed, RMA'd" aria-label="Reason for retiring" style="max-width:260px">
+        <button class="danger" type="submit">Retire tag</button>
+      {% endif %}
+    </form>
+  </div>
+</div>
+{% endblock %}

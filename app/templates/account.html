@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Your account{% endblock %}
+{% block main %}
+<form class="card stack narrow" method="post" action="/account/name" style="margin-top:0">
+  <h1>{{ user_label(user) }}</h1>
+  <p class="muted">Username {{ user.username }} · role {{ user.role }}{% if user.email %} · {{ user.email }}{% endif %}</p>
+  <div class="field"><label for="dname">Your name</label><input type="text" id="dname" name="name" value="{{ user.display_name }}" maxlength="80" autocomplete="name">
+    <span class="hint">Shown in the top bar and in tag history. Your username stays the same for signing in.</span></div>
+  <div class="actions"><button class="primary" type="submit">Save name</button></div>
+</form>
+<form class="card stack narrow" method="post" action="/account/password" style="margin-top:0">
+  <h2>Change password</h2>
+  <div class="field"><label for="current">Current password</label><input type="password" id="current" name="current" autocomplete="current-password"></div>
+  <div class="field"><label for="new">New password</label><input type="password" id="new" name="new" minlength="12" required autocomplete="new-password"><span class="hint">At least 12 characters.</span></div>
+  <div class="actions"><button class="primary" type="submit">Change password</button></div>
+</form>
+{% endblock %}

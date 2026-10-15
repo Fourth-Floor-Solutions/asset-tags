@@ -1,0 +1,22 @@
+# Asset Tags. An explicit project name stops this stack clashing with others
+# whose compose file sits in a folder of the same name.
+name: asset-tags
+services:
+  app:
+    build: .
+    image: asset-tags:latest
+    container_name: asset-tags
+    restart: unless-stopped
+    env_file: .env
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    ports:
+      - "${HOST_PORT:-8080}:8080"
+    volumes:
+      - ./data:/data

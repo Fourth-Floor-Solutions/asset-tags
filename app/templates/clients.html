@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Clients{% endblock %}
+{% block main %}
+<div class="head">
+  <div><h1>Clients</h1><p class="muted">The label name is what's printed on tags. Keep it short: about 20 characters fits the slim 12 mm tag.</p></div>
+  {% if user.role == 'admin' %}
+  <div class="actions">
+    {% if hudu_write %}<form method="post" action="/hudu/sync-all">
+      <button type="submit" {{ 'disabled' if not hudu_pending }}>Write tags to Hudu{% if hudu_pending %} ({{ hudu_pending }}){% endif %}</button>
+    </form>{% endif %}
+    <form method="post" action="/clients/sync">
+      <button class="primary" type="submit" {{ 'disabled' if not hudu_on }}>Sync from Hudu</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% if not hudu_on %}<div class="flash warn">Hudu isn't configured, so clients can only be added by hand. Set HUDU_URL and HUDU_API_KEY to sync.</div>{% endif %}
+<div class="tbl">
+<table>
+  <thead><tr><th>Client</th><th>Label name</th><th>Tags</th><th>Hudu</th><th>Active</th>{% if user.role == 'admin' %}<th></th>{% endif %}</tr></thead>
+  <tbody>
+  {% for c in clients %}
+  <tr>
+    <td>{{ c.name }}{% if c.is_internal %} <span class="pill fmt">Us</span>{% endif %}</td>
+    {% if user.role == 'admin' %}
+    <td><form id="c{{ c.id }}" method="post" action="/clients/{{ c.id }}"><input type="text" name="label_name" value="{{ c.label_name }}" maxlength="40" aria-label="Label name for {{ c.name }}" style="min-width:200px"></form></td>
+    {% else %}<td>{{ c.label_name }}</td>{% endif %}
+    <td class="mono">{% if c.n %}<a href="/?client_id={{ c.id }}">{{ c.n }}</a>{% else %}0{% endif %}</td>
+    <td class="mono small">{{ c.hudu_id or '—' }}</td>
+    <td>{% if user.role == 'admin' %}<input type="checkbox" name="active" value="1" form="c{{ c.id }}" {{ 'checked' if c.active }} aria-label="{{ c.name }} active">{% else %}{{ 'Yes' if c.active else 'No' }}{% endif %}</td>
+    {% if user.role == 'admin' %}<td><button class="quiet" type="submit" form="c{{ c.id }}">Save</button></td>{% endif %}
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if user.role == 'admin' %}
+<form class="card stack" method="post" action="/clients/new">
+  <h2>Add a client by hand</h2>
+  <p class="muted small">Only for clients that aren't in Hudu. Clients added here can't be linked to Hudu assets.</p>
+  <div class="row">
+    <div class="field"><label for="new_name">Client name</label><input type="text" id="new_name" name="name" required></div>
+    <div class="field"><label for="new_label">Label name</label><input type="text" id="new_label" name="label_name" maxlength="40"></div>
+  </div>
+  <div class="actions"><button type="submit">Add client</button></div>
+</form>
+{% endif %}
+{% endblock %}

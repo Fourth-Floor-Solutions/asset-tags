@@ -1,0 +1,23 @@
+<div class="row">
+  <div class="field"><label for="device_name">Device name</label><input type="text" id="device_name" name="device_name" value="{{ form.device_name or '' }}" placeholder="SITE01-SW01"></div>
+  <div class="field"><label for="model">Model</label><input type="text" id="model" name="model" value="{{ form.model or '' }}" placeholder="USW-Pro-48"></div>
+  <div class="field"><label for="serial">Serial number</label><input type="text" id="serial" name="serial" value="{{ form.serial or '' }}" autocomplete="off"></div>
+</div>
+{% if hudu_on %}
+<div class="picker" id="hudu-picker" data-client-field="client_id">
+  <span class="lbl">Hudu asset</span>
+  <input type="hidden" id="hudu_asset_id" name="hudu_asset_id" value="{{ form.hudu_asset_id or '' }}">
+  <input type="hidden" id="hudu_asset_url" name="hudu_asset_url" value="{{ form.hudu_asset_url or '' }}">
+  <div class="linked" id="hudu-linked" data-name="{{ form.device_name or '' }}" hidden>
+    Linked to <b data-name></b> <a href="#" target="_blank" rel="noopener">Open in Hudu</a>
+    <button type="button" class="quiet" id="hudu-unlink">Unlink</button>
+  </div>
+  <div class="filters">
+    <input type="search" id="hudu-q" placeholder="Search this client's Hudu assets by name or serial" autocomplete="off">
+    <button type="button" class="quiet" id="hudu-go">Search</button>
+  </div>
+  <div class="hint" id="hudu-status" aria-live="polite"></div>
+  <div class="picker-results" id="hudu-results"></div>
+</div>
+{% endif %}
+<div class="field"><label for="notes">Notes</label><textarea id="notes" name="notes">{{ form.notes or '' }}</textarea></div>

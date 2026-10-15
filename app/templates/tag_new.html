@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Tag a device{% endblock %}
+{% block main %}
+<div class="head"><div><h1>Tag a device</h1><p class="muted">Issues the next code for one device. You print it on the next page.</p></div></div>
+{% if error %}<div class="flash bad">{{ error }}</div>{% endif %}
+<form class="card stack" method="post" action="/tags/new" data-format-guard>
+  <div class="field"><label for="client_id">Client</label>{% include "_client_select.html" %}</div>
+  <div class="field"><span class="lbl">Label format</span>{% set sel_format = form.format or 'standard' %}{% include "_formats.html" %}</div>
+  {% include "_device_fields.html" %}
+  <div class="actions"><button class="primary" type="submit">Issue tag</button><span class="hint">Tip: for kit you haven't unboxed yet, use Print a batch and fill in details when you scan each tag.</span></div>
+</form>
+{% endblock %}

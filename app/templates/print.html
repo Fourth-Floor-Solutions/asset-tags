@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Print {{ items|length }} tag{{ 's' if items|length != 1 }} · {{ org.org_short }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;800&display=swap">
+<link rel="icon" href="{{ favicon }}" type="image/svg+xml">
+<style>:root { --accent: {{ org.accent }}; --accent-ink: {{ accent_ink }}; }</style>
+<link rel="stylesheet" href="{{ static('app.css') }}">
+<script src="{{ static('app.js') }}" defer></script>
+<style>
+  /* One named page per tape size, so a mixed job still prints each label at its real size. */
+  {% for f in used_formats %}@page {{ f }} { size: {{ formats[f].width }}mm {{ formats[f].height }}mm; margin: 0; }
+  {% endfor %}
+  .sheet { display: flex; flex-wrap: wrap; gap: 14px; }
+  .sheet .one { display: grid; gap: 4px; justify-items: start; }
+  .sheet svg { display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.3)); }
+  .sheet .cap { font: 500 12px var(--mono); color: var(--muted); }
+  @media print {
+    body { background: #fff; }
+    .screen { display: none !important; }
+    main { padding: 0; margin: 0; max-width: none; display: block; }
+    .sheet { display: block; }
+    .sheet .one { display: block; break-after: page; }
+    .sheet .one:last-child { break-after: auto; }
+    .sheet .cap { display: none; }
+    .sheet svg { filter: none; }
+    {% for f in used_formats %}.one.fmt-{{ f }} { page: {{ f }}; }
+    {% endfor %}
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="screen head">
+    <div>
+      <h1>{{ items|length }} tag{{ 's' if items|length != 1 }} ready to print</h1>
+      <p class="muted">Print to the P-touch with the tape for {% for f in used_formats %}{{ formats[f].tape }}{{ ', ' if not loop.last }}{% endfor %}. Each label prints at its real size, one per page.{% if used_formats|length > 1 %} This job mixes tape sizes: print one format at a time, or swap cassettes between labels.{% endif %}</p>
+    </div>
+    <div class="actions">
+      {% if printer_on and items|length > 1 %}<select id="strip-mode" aria-label="How to cut a batch" class="strip-opt">
+    <option value="cut">Cut each label</option>
+    <option value="strip">One strip, cut them yourself</option>
+  </select>{% endif %}
+      {% if printer_on %}<button class="primary" id="send-btn" type="button" {{ 'disabled' if not n_ready }}>Print on label printer</button>{% endif %}
+      <button class="{{ 'quiet' if printer_on else 'primary' }}" id="print-btn" type="button" {{ 'disabled' if not items }}>{{ 'Print from browser' if printer_on else 'Print' }}</button>
+      {% if items|length == 1 %}<a class="btn" href="/tags/{{ items[0].tag.code }}">Back to tag</a>{% else %}<a class="btn" href="/">Back to tags</a>{% endif %}
+    </div>
+  </div>
+  {% if printer_on %}
+  <div class="screen flash {{ 'ok' if n_ready == items|length else ('warn' if n_ready else 'bad') }}" id="printer-line">
+    {% for x in pstats %}{{ x.p.name }}: {% if x.err %}not answering{% elif x.st.tape_mm %}{{ x.st.tape_mm }} mm {{ x.st.tape_colour }} tape{% else %}no tape{% endif %}{{ '; ' if not loop.last else '. ' }}{% endfor %}
+    {% if n_ready == items|length %}All {{ n_ready }} label{{ 's' if n_ready != 1 }} can print now.
+    {% elif n_ready %}{{ n_ready }} of {{ items|length }} can print now; the rest need a different cassette.
+    {% else %}None of these labels fit the loaded tape. Load {% for f in used_formats %}{{ formats[f].tape }}{{ ', ' if not loop.last }}{% endfor %}.{% endif %}
+  </div>
+  <div class="screen flash" id="send-result" hidden></div>
+  {% endif %}
+  {% if batch %}<div class="screen flash ok">Issued {{ items|length }} tags for {{ items[0].tag.client_name }}. Once each is on a device, scan it with your phone to record what it's on.</div>{% endif %}
+  <p class="screen flash warn" id="fit-warn" hidden>A client name is too long for its tape and has been squeezed. An admin can set a shorter label name on the Clients page.</p>
+  <div class="screen flash bad" id="print-err" hidden></div>
+  <div class="sheet">
+    {% for it in items %}
+    <div class="one fmt-{{ it.tag.format }}" data-code="{{ it.tag.code }}">{{ it.svg|safe }}<span class="cap">{{ it.tag.code }} · {{ it.spec.name }}{% if printer_on %}{{ ' · prints on ' ~ target[it.tag.code] if it.tag.code in target else ' · needs ' ~ it.spec.tape_mm ~ ' mm ' ~ it.spec.tape_colour ~ ' tape' }}{% endif %}</span></div>
+    {% endfor %}
+  </div>
+</main>
+<script>
+var sendBtn = document.getElementById("send-btn");
+if (sendBtn) sendBtn.addEventListener("click", function () {
+  var out = document.getElementById("send-result");
+  sendBtn.disabled = true;
+  sendBtn.textContent = "Printing…";
+  fetch("/print/send", { method: "POST", body: new URLSearchParams({ codes: "{{ code_list }}", strip: (document.getElementById("strip-mode") || {}).value === "strip" ? "1" : "0" }), credentials: "same-origin" })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      out.hidden = false;
+      out.className = "screen flash " + (d.ok ? (d.waiting && d.waiting.length ? "warn" : "ok") : "bad");
+      out.textContent = d.message;
+      (d.printed || []).forEach(function (c) {
+        var el = document.querySelector('.one[data-code="' + c + '"] .cap');
+        if (el) el.textContent = c + " · printed";
+      });
+    })
+    .catch(function () { out.hidden = false; out.className = "screen flash bad"; out.textContent = "Couldn't reach the server. Check the Printer page."; })
+    .finally(function () { sendBtn.disabled = false; sendBtn.textContent = "Print on label printer"; });
+});
+document.getElementById("print-btn").addEventListener("click", function () {
+  var body = new URLSearchParams({ codes: "{{ code_list }}" });
+  fetch("/print/record", { method: "POST", body: body, credentials: "same-origin" })
+    .catch(function () {
+      var e = document.getElementById("print-err");
+      e.textContent = "Printed, but the print wasn't recorded. Reload and try again if you need the history.";
+      e.hidden = false;
+    })
+    .finally(function () { window.print(); });
+});
+</script>
+</body>
+</html>

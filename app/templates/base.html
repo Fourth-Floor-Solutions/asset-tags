@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Asset Tags{% endblock %} · {{ org.org_short }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;800&display=swap">
+<link rel="icon" href="{{ favicon }}" type="image/svg+xml">
+<style>:root { --accent: {{ org.accent }}; --accent-ink: {{ accent_ink }}; }</style>
+<link rel="stylesheet" href="{{ static('app.css') }}">
+<script src="{{ static('app.js') }}" defer></script>
+{% block head %}{% endblock %}
+</head>
+<body>
+{% if user %}
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="/"><span class="brand-mark">{{ org.org_mark }}</span> Asset Tags</a>
+    {% set path = request.url.path %}
+    <nav class="nav">
+      <a href="/" class="{{ 'on' if path == '/' }}">Tags</a>
+      <a href="/tags/new" class="{{ 'on' if path == '/tags/new' }}">Tag a device</a>
+      <a href="/tags/batch" class="{{ 'on' if path == '/tags/batch' }}">Print a batch</a>
+      <a href="/clients" class="{{ 'on' if path.startswith('/clients') }}">Clients</a>
+      <a href="/printer" class="{{ 'on' if path.startswith('/printer') }}">Printer</a>
+      {% if user.role == 'admin' %}<a href="/users" class="{{ 'on' if path.startswith('/users') }}">Users</a>
+      <a href="/settings" class="{{ 'on' if path.startswith('/settings') or path.startswith('/setup') }}">Settings</a>{% endif %}
+    </nav>
+    <div class="who"><a href="/account">{{ user_label(user) }}</a><a href="/logout">Sign out</a></div>
+  </div>
+</header>
+{% endif %}
+<main>
+  {% if flash %}<div class="flash {{ flash.kind }}" role="status">{{ flash.text }}</div>{% endif %}
+  {% block main %}{% endblock %}
+</main>
+<footer class="foot"><a href="{{ source_url }}" rel="noopener">Asset Tags</a> · free software under the AGPL-3.0 · <a href="{{ source_url }}" rel="noopener">source code</a></footer>
+</body>
+</html>

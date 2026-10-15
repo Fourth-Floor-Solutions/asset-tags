@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block main %}
+<div class="card narrow">
+  <div class="brand"><span class="brand-mark">{{ org.org_mark }}</span> Asset Tags</div>
+  <h1>Sign in</h1>
+  {% if error %}<div class="flash bad">{{ error }}</div>{% endif %}
+  {% set local_form %}
+  <form class="stack" method="post" action="/login">
+    <input type="hidden" name="next" value="{{ next }}">
+    <div class="field"><label for="username">Username or email</label><input type="text" id="username" name="username" autocomplete="username" required {{ '' if sso else 'autofocus' }}></div>
+    <div class="field"><label for="password">Password</label><input type="password" id="password" name="password" autocomplete="current-password" required></div>
+    <button class="{{ 'quiet' if sso else 'primary' }}" type="submit">Sign in</button>
+  </form>
+  {% endset %}
+  {% if sso %}
+  <a class="btn sso" href="/auth/login?next={{ next|urlencode }}">Sign in with Microsoft</a>
+  {# Kept as a fallback: if Microsoft sign-in breaks, a local admin can still get in. #}
+  <details class="local-login" {{ 'open' if error and request.method == 'POST' }}>
+    <summary class="small muted">Use a local account</summary>
+    {{ local_form }}
+  </details>
+  {% else %}
+  {{ local_form }}
+  {% endif %}
+</div>
+{% endblock %}

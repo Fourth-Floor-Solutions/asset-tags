@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+{% block main %}
+<div class="head"><div><h1>Users</h1><p class="muted">Admins manage clients and users. Users tag devices and print.{% if sso %} Microsoft sign-in matches people by email.{% endif %}</p></div></div>
+<div class="tbl">
+<table>
+  <thead><tr><th>User</th><th>Name</th><th>Email</th><th>Role</th><th>Password</th><th></th></tr></thead>
+  <tbody>
+  {% for u in users %}
+  <tr>
+    <td>{{ u.username }}{% if u.id == user.id %} <span class="pill">You</span>{% endif %}</td>
+    <td><form method="post" action="/users/{{ u.id }}/name" class="actions">
+      <input type="text" name="name" value="{{ u.display_name }}" maxlength="80" placeholder="Full name" aria-label="Name for {{ u.username }}" style="max-width:180px">
+      <button class="quiet" type="submit">Set</button></form></td>
+    <td>{{ u.email or '—' }}</td>
+    <td><form method="post" action="/users/{{ u.id }}/role" class="actions">
+      <select name="role" aria-label="Role for {{ u.username }}" style="width:auto">{% for r in ['user','admin'] %}<option {{ 'selected' if u.role == r }}>{{ r }}</option>{% endfor %}</select>
+      <button class="quiet" type="submit">Set</button></form></td>
+    <td><form method="post" action="/users/{{ u.id }}/password" class="actions">
+      <input type="password" name="password" minlength="12" placeholder="{{ 'New password' if u.password else 'Microsoft only' }}" aria-label="New password for {{ u.username }}" autocomplete="new-password" style="max-width:180px">
+      <button class="quiet" type="submit">Set</button></form></td>
+    <td>{% if u.id != user.id %}<form method="post" action="/users/{{ u.id }}/delete"><button class="danger" type="submit">Delete</button></form>{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<form class="card stack" method="post" action="/users/new">
+  <h2>Add a user</h2>
+  <div class="row">
+    <div class="field"><label for="nu_name">Username</label><input type="text" id="nu_name" name="username" required></div>
+    <div class="field"><label for="nu_email">Email</label><input type="email" id="nu_email" name="email"></div>
+    <div class="field"><label for="nu_role">Role</label><select id="nu_role" name="role"><option>user</option><option>admin</option></select></div>
+    <div class="field"><label for="nu_pw">Password</label><input type="password" id="nu_pw" name="password" minlength="12" autocomplete="new-password" placeholder="Leave empty for Microsoft only"></div>
+  </div>
+  <div class="actions"><button type="submit">Add user</button></div>
+</form>
+{% endblock %}
