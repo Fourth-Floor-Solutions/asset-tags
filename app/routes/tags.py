@@ -29,7 +29,8 @@ def dashboard(request: Request, q: str = "", client_id: str = "", status: str = 
         with db.connection() as conn:
             if db.get_tag(conn, code):
                 return go(f"/tags/{code}")
-    where, args = [], []
+    where: list[str] = []
+    args: list[object] = []
     if q:
         like = f"%{q}%"
         where.append(

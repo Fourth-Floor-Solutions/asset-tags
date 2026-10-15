@@ -34,6 +34,9 @@ jobs:
         with:
           python-version: "3.14"
       - run: pip install -q -r requirements-dev.txt
+      # In this job rather than its own, to save Actions minutes (it needs the same install).
+      - name: Type check (mypy)
+        run: mypy
       - name: Tests with coverage
         run: python -m pytest --cov=app --cov=scripts --cov-report=term-missing:skip-covered --cov-fail-under=80
 

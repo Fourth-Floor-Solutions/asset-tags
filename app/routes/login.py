@@ -8,10 +8,11 @@ from collections import defaultdict, deque
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 
-from .. import auth, db
+from .. import auth, db, log
 from ..web import PUBLIC_BASE_URL, go, page, safe_next
 
 router = APIRouter()
+_log = log.get("auth")
 
 
 @router.get("/login", response_class=HTMLResponse)
@@ -22,7 +23,7 @@ def login_form(request: Request, next: str = "/"):
 # Failed sign-ins per client IP; the sign-in page is usually internet-facing.
 LOGIN_WINDOW = 15 * 60
 LOGIN_MAX_FAILS = 10
-_login_fails = defaultdict(deque)
+_login_fails: defaultdict[str, deque[float]] = defaultdict(deque)
 
 
 def _login_blocked(ip: str) -> bool:
@@ -37,6 +38,7 @@ def _login_blocked(ip: str) -> bool:
 def login(request: Request, username: str = Form(...), password: str = Form(...), next: str = Form("/")):
     ip = request.client.host if request.client else "?"
     if _login_blocked(ip):
+        _log.warning("sign-in refused from %s: too many failed attempts", ip)
         return page(
             request,
             "login.html",
@@ -54,8 +56,10 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
     # Always run the password hash, so unknown usernames take as long as wrong passwords.
     if not auth.verify_password(password, row["password"] if row else auth.DUMMY_HASH) or not row:
         _login_fails[ip].append(time.monotonic())
+        _log.warning("failed sign-in for %r from %s", username.strip()[:80], ip)
         return page(request, "login.html", status_code=401, next=next, error="Username or password is wrong.")
     _login_fails.pop(ip, None)
+    _log.info("%s signed in from %s", row["username"], ip)
     request.session.clear()
     request.session["uid"] = row["id"]
     return go(safe_next(next))
@@ -83,13 +87,15 @@ async def sso_callback(request: Request):
         return go("/login")
     try:
         token = await client.entra.authorize_access_token(request)
-    except Exception:
+    except Exception as e:
+        _log.warning("Microsoft sign-in failed: %s", e)
         return page(
             request, "login.html", status_code=401, next="/", error="Microsoft sign-in didn't complete. Try again."
         )
     info = token.get("userinfo") or {}
     cfg = auth.sso_config()
     if cfg and auth.GUID_RE.match(cfg[0]) and (info.get("tid") or "").lower() != cfg[0].lower():
+        _log.warning("Microsoft sign-in refused: account from another tenant (%s)", info.get("tid"))
         return page(
             request,
             "login.html",
@@ -100,6 +106,7 @@ async def sso_callback(request: Request):
     email = info.get("email") or info.get("preferred_username") or ""
     row = auth.sso_user_for(email, info.get("name") or "")
     if not row:
+        _log.warning("Microsoft sign-in refused: %s has no TagDesk account", email or "unknown account")
         return page(
             request,
             "login.html",
@@ -107,6 +114,7 @@ async def sso_callback(request: Request):
             next="/",
             error=f"{email or 'That account'} doesn't have access. Ask an admin to add you.",
         )
+    _log.info("%s signed in with Microsoft", row["username"])
     nxt = safe_next(request.session.pop("sso_next", "/"))
     request.session.clear()
     request.session["uid"] = row["id"]

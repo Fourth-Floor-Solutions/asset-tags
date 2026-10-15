@@ -13,7 +13,7 @@ LOW_CM = 100  # warn when about 1 m is left
 LEAD_IN_MM = 25  # blank the printer cuts off at the start of every job
 
 
-def tape_key(st: dict) -> str | None:
+def tape_key(st: dict | None) -> str | None:
     return f"{st['tape_mm']}|{st['tape_colour']}" if st and st.get("tape_mm") else None
 
 
@@ -48,7 +48,7 @@ def track(conn, p, st: dict | None) -> None:
 
 def summary(conn, printer_id: int, st: dict | None) -> dict | None:
     key = tape_key(st)
-    if not key:
+    if not key or st is None:
         return None
     c = _cassette(conn, printer_id, key)
     left = max(0, c["length_cm"] - c["used_cm"])

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import time
+from typing import Any
 
 import httpx
 
@@ -36,7 +37,7 @@ def base_url() -> str:
     return settings.get("hudu_url").rstrip("/")
 
 
-def _request(method: str, path: str, params: dict | None = None, body: dict | None = None) -> object:
+def _request(method: str, path: str, params: dict | None = None, body: dict | None = None) -> Any:
     if not configured():
         raise HuduError("Hudu isn't set up. Add its address and API key in Settings.")
     try:
@@ -57,12 +58,13 @@ def _request(method: str, path: str, params: dict | None = None, body: dict | No
     return r.json() if r.content else {}
 
 
-def _get(path: str, params: dict) -> object:
+def _get(path: str, params: dict) -> Any:
     return _request("GET", path, params=params)
 
 
 def list_companies() -> list:
-    out, page = [], 1
+    out: list[dict] = []
+    page = 1
     while True:
         data = _get("/companies", {"page": page, "page_size": PAGE_SIZE})
         batch = data.get("companies", []) if isinstance(data, dict) else []

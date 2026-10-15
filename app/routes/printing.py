@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from .. import auth, codes, db, labels, printer, settings, usage
+from .. import auth, codes, db, labels, log, printer, settings, usage
 from ..tagops import (
     MAX_PRINT,
     label_name,
@@ -17,6 +17,7 @@ from ..tagops import (
 from ..web import PUBLIC_BASE_URL, clean, flash, go, page
 
 router = APIRouter()
+_log = log.get("printing")
 
 
 def _print_codes(raw: str) -> list:
@@ -100,11 +101,13 @@ def print_send(request: Request, codes_csv: str = Form(..., alias="codes"), stri
             try:
                 printer.send(p["host"], printer.build_job(images, st["tape_mm"], p["nudge_dots"], strip=strip == "1"))
             except printer.PrinterError as e:
+                _log.warning("print job to %s (%s) failed: %s", p["name"], p["host"], e)
                 problems.append(f"{p['name']}: {e}")
                 waiting += batch
                 continue
             problem = printer.wait_done(p["host"])
             if problem:
+                _log.warning("%s reported a problem after printing: %s", p["name"], problem)
                 problems.append(f"{p['name']}: {problem}")
             record_printed(conn, batch, auth.label(user), p["name"])
             usage.track(conn, p, st)
