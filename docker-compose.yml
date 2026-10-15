@@ -3,7 +3,11 @@
 name: tagdesk
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        # Shown in the footer: GIT_COMMIT=$(git rev-parse --short HEAD) docker compose up -d --build
+        GIT_COMMIT: ${GIT_COMMIT:-}
     image: tagdesk:latest
     container_name: tagdesk
     restart: unless-stopped

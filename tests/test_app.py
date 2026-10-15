@@ -347,3 +347,15 @@ def test_saved_accent_overrides_stylesheet_default():
         assert html.index("--accent: #00aaff") > html.index("/static/app.css")
     finally:
         settings.save({"accent": settings.DEFAULTS["accent"]})
+
+
+def test_version_in_footer_and_endpoint(monkeypatch):
+    from app import __version__, version
+    c = TestClient(app)
+    assert c.get("/version").json()["version"] == __version__
+    html = c.get("/login").text
+    assert f"v{__version__}" in html and f"/releases/tag/v{__version__}" in html
+    monkeypatch.setattr(version, "COMMIT", "abc1234def")
+    assert "abc1234" in TestClient(app).get("/login").text
+    monkeypatch.setenv("GIT_COMMIT", "not a commit!")
+    assert version._commit() == ""

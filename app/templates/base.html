@@ -36,6 +36,9 @@
   {% if flash %}<div class="flash {{ flash.kind }}" role="status">{{ flash.text }}</div>{% endif %}
   {% block main %}{% endblock %}
 </main>
-<footer class="foot"><a href="{{ source_url }}" rel="noopener">TagDesk</a> · free software under the AGPL-3.0 · <a href="{{ source_url }}" rel="noopener">source code</a></footer>
+<footer class="foot"><a href="{{ source_url }}" rel="noopener">TagDesk</a>
+  <a href="{{ source_url }}/releases/tag/v{{ version }}" rel="noopener" class="mono">v{{ version }}</a>{% if commit %}
+  (<a href="{{ source_url }}/commit/{{ commit }}" rel="noopener" class="mono">{{ commit[:7] }}</a>){% endif %}
+  · free software under the AGPL-3.0 · <a href="{{ source_url }}" rel="noopener">source code</a></footer>
 </body>
 </html>

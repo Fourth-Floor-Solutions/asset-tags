@@ -279,7 +279,15 @@ docker exec tagdesk python -c "import sqlite3; s=sqlite3.connect('/data/tagdesk.
 ```
 
 To update, pull the new code and run `docker compose up -d --build`. The
-database is upgraded automatically on start.
+database is upgraded automatically on start. To show the exact build in the
+footer, pass the commit when building:
+
+```sh
+GIT_COMMIT=$(git rev-parse --short HEAD) docker compose up -d --build
+```
+
+The running version is also at `/version`. Changes are listed in
+[CHANGELOG.md](CHANGELOG.md).
 
 ## Development
 

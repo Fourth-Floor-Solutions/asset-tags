@@ -4,6 +4,9 @@ WORKDIR /srv
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
+# Optional: the git commit this image was built from, shown in the footer.
+ARG GIT_COMMIT=""
+ENV GIT_COMMIT=$GIT_COMMIT
 COPY scripts ./scripts
 RUN useradd -u 1000 -m tags && mkdir -p /data && chown tags /data
 USER 1000

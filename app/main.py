@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import auth, codes, db, hudu, labels, printer, settings, usage
+from . import auth, codes, db, hudu, labels, printer, settings, usage, version
 
 HERE = os.path.dirname(__file__)
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:8080").rstrip("/")
@@ -67,7 +67,7 @@ _VERSIONS = _static_versions()
 templates.env.globals["static"] = lambda name: f"/static/{name}?v={_VERSIONS.get(name, '0')}"
 
 
-SETUP_EXEMPT = ("/setup", "/static/", "/favicon", "/login", "/logout", "/auth/", "/healthz")
+SETUP_EXEMPT = ("/setup", "/static/", "/favicon", "/login", "/logout", "/auth/", "/healthz", "/version")
 
 
 @app.middleware("http")
@@ -122,6 +122,8 @@ def page(request: Request, name: str, status_code: int = 200, **ctx):
         tape_fill=labels.fill,
         public_base=PUBLIC_BASE_URL,
         source_url=SOURCE_URL,
+        version=version.VERSION,
+        commit=version.COMMIT,
     )
     return templates.TemplateResponse(request, name, ctx, status_code=status_code)
 
@@ -253,6 +255,11 @@ def favicon_svg():
            f'fill="{escape(org["accent"])}"/><text x="16" y="22" text-anchor="middle" font-family="Menlo, monospace" '
            f'font-weight="800" font-size="{size}" fill="#111">{mark}</text></svg>')
     return Response(svg, media_type="image/svg+xml", headers={"Cache-Control": "public, max-age=300"})
+
+
+@app.get("/version")
+def version_info():
+    return {"name": "TagDesk", "version": version.VERSION, "commit": version.COMMIT or None}
 
 
 @app.get("/healthz", response_class=PlainTextResponse)
