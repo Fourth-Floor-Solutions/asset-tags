@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Coverage{% endblock %}
+{% block main %}
+<div class="head">
+  <div><h1>Coverage</h1>
+    <p class="muted">How many of each client's devices in Hudu have a tag. Fetched from Hudu when you press Refresh; nothing is written to Hudu.</p></div>
+  <form method="post" action="/coverage/refresh"><button class="primary" type="submit" {{ 'disabled' if refreshing }}>{{ 'Refreshing…' if refreshing else 'Refresh from Hudu' }}</button></form>
+</div>
+{% if refreshing %}<div class="flash warn" role="status">Fetching devices from Hudu. Reload in a minute to see the results.</div>{% endif %}
+{% if totals.pct is not none %}
+<div class="stats">
+  <div class="stat"><b>{{ totals.pct }}%</b><span>Devices tagged</span></div>
+  <div class="stat"><b>{{ totals.tagged }}</b><span>Tagged, of {{ totals.assets }}</span></div>
+  <div class="stat{{ ' alert' if totals.assets - totals.tagged }}"><b>{{ totals.assets - totals.tagged }}</b><span>Still to tag</span></div>
+  <div class="stat"><b>{{ totals.unlinked }}</b><span>Tags not linked to Hudu</span></div>
+</div>
+{% endif %}
+<div class="tbl">
+<table>
+  <thead><tr><th>Client</th><th>Tagged</th><th>Devices</th><th>To tag</th><th>Tags not in Hudu</th><th>Last refreshed</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>
+    <td><a href="/coverage/{{ r.client.id }}">{{ r.client.name }}</a></td>
+    {% if r.checked %}
+    <td class="nowrap">{% if r.pct is not none %}<span class="covbar" role="img" aria-label="{{ r.pct }}% tagged"><span style="width:{{ r.pct }}%"></span></span> <b class="mono">{{ r.pct }}%</b>{% else %}—{% endif %}</td>
+    <td class="mono">{{ r.assets }}</td>
+    <td class="mono">{% if r.untagged %}<a href="/coverage/{{ r.client.id }}">{{ r.untagged|length }}</a>{% else %}0{% endif %}</td>
+    {% else %}
+    <td colspan="3" class="muted small">Not fetched yet</td>
+    {% endif %}
+    <td class="mono">{{ r.unlinked|length }}</td>
+    <td class="small">{% if r.error %}<span class="pill reprint">failed</span> {% endif %}{{ r.refreshed_at[:16]|replace('T', ' ') ~ ' UTC' if r.refreshed_at else '—' }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6" class="muted">No clients are linked to Hudu yet. Sync them on the Clients page.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if user.role == 'admin' and layouts %}
+<form class="card stack" method="post" action="/coverage/layouts">
+  <div><h2>What counts as a device</h2>
+    <p class="muted small">Untick asset types that never get a label, such as licences, contacts or cloud services. Types appear here once they've been fetched from Hudu.</p></div>
+  <div class="checks">
+    {% for l in layouts %}<input type="hidden" name="shown" value="{{ l.id }}">
+    <label><input type="checkbox" name="count" value="{{ l.id }}" {{ 'checked' if l.id not in exclude }}> {{ l.name }} <span class="muted small">({{ l.assets }})</span></label>
+    {% endfor %}
+  </div>
+  <div class="actions"><button type="submit">Save</button></div>
+</form>
+{% endif %}
+{% endblock %}

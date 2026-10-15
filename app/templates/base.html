@@ -26,6 +26,7 @@
       <a href="/tags/new" class="{{ 'on' if path == '/tags/new' }}">Tag a device</a>
       <a href="/tags/batch" class="{{ 'on' if path == '/tags/batch' }}">Print a batch</a>
       <a href="/clients" class="{{ 'on' if path.startswith('/clients') }}">Clients</a>
+      {% if hudu_on %}<a href="/coverage" class="{{ 'on' if path.startswith('/coverage') }}">Coverage</a>{% endif %}
       <a href="/printer" class="{{ 'on' if path.startswith('/printer') }}">Printer</a>
       {% if user.role == 'admin' %}<a href="/users" class="{{ 'on' if path.startswith('/users') }}">Users</a>
       <a href="/settings" class="{{ 'on' if path.startswith('/settings') or path.startswith('/setup') }}">Settings</a>{% endif %}

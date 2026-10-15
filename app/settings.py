@@ -38,6 +38,7 @@ DEFAULTS = {
     "hudu_url": "",
     "hudu_write": "0",
     "hudu_tag_field": "Asset Tag",
+    "hudu_coverage_exclude": "",  # Hudu layout ids left out of tag coverage, comma-separated
     "sso_auto_domains": "",
     "entra_tenant_id": "",
     "entra_client_id": "",

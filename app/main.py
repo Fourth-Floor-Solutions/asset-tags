@@ -14,12 +14,12 @@ from contextlib import asynccontextmanager
 from urllib.parse import quote, urlparse
 
 from fastapi import FastAPI, Request
-from fastapi.responses import PlainTextResponse, RedirectResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import auth, db, hudu_archive, labels, log, settings
-from .routes import clients, login, printing, public, tags, users
+from . import auth, db, hudu, hudu_archive, labels, log, settings
+from .routes import clients, coverage, login, printing, public, tags, users
 from .routes import settings as settings_routes
 from .web import HERE, PUBLIC_BASE_URL, page
 
@@ -130,6 +130,15 @@ async def _login_required(request: Request, exc):
     return RedirectResponse(f"/login?next={quote(request.url.path)}", status_code=303)
 
 
+@app.exception_handler(hudu.HuduOff)
+async def _hudu_off(request: Request, exc):
+    """Hudu features are only available while Hudu is set up."""
+    msg = "Hudu isn't set up. An admin can add its address and API key in Settings."
+    if request.url.path.startswith("/api/"):
+        return JSONResponse({"error": msg}, status_code=404)
+    return page(request, "message.html", status_code=404, heading="Hudu isn't set up", body=msg)
+
+
 @app.exception_handler(auth.Forbidden)
 async def _forbidden(request: Request, exc):
     return page(
@@ -142,5 +151,6 @@ app.include_router(tags.router)
 app.include_router(printing.router)
 app.include_router(settings_routes.router)
 app.include_router(clients.router)
+app.include_router(coverage.router)
 app.include_router(users.router)
 app.include_router(public.router)  # last: its /{raw} scan route matches any single path segment

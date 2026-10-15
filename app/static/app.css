@@ -241,3 +241,10 @@ button.linklike:focus-visible { outline: 2px solid currentColor; outline-offset:
   .filters input[type=search] { max-width: none; }
   .history li { grid-template-columns: 1fr; gap: 2px; }
 }
+
+/* tag coverage */
+.covbar { display: inline-block; vertical-align: middle; width: 90px; height: 8px; background: var(--chip); border-radius: 99px; overflow: hidden; }
+.covbar span { display: block; height: 100%; background: var(--ok); }
+.checks { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.checks label { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; }
+.stack-sm { display: grid; gap: 10px; }

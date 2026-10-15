@@ -17,6 +17,16 @@ PAGE_SIZE = 100
 PAUSE = 0.4
 
 
+class HuduOff(Exception):
+    """A Hudu feature was used while Hudu isn't set up (no address or API key)."""
+
+
+def require() -> None:
+    """Every Hudu feature calls this first: they're only available while Hudu is set up."""
+    if not configured():
+        raise HuduOff()
+
+
 class HuduError(Exception):
     def __init__(self, message: str, status: int | None = None):
         super().__init__(message)
@@ -105,6 +115,23 @@ def _summary(a: dict) -> dict:
 
 
 SCAN_PAGES = 5
+MAX_COMPANY_PAGES = 50  # 5,000 assets per client is plenty; stops a runaway loop
+
+
+def company_assets(company_id: int) -> list:
+    """Every unarchived asset of one company, paged and spaced out (for tag coverage)."""
+    out: list[dict] = []
+    for page in range(1, MAX_COMPANY_PAGES + 1):
+        if page > 1:
+            time.sleep(PAUSE)
+        params = {"company_id": company_id, "archived": "false", "page": page, "page_size": PAGE_SIZE}
+        batch = (_get("/assets", params) or {}).get("assets", [])
+        for a in batch:
+            if a.get("company_id") in (None, company_id) and not a.get("archived"):
+                out.append(dict(_summary(a), layout_id=a.get("asset_layout_id")))
+        if len(batch) < PAGE_SIZE:
+            break
+    return out
 
 
 def search_assets(company_id: int, query: str) -> list:

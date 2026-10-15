@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Coverage · {{ c.name }}{% endblock %}
+{% block main %}
+<div class="head">
+  <div><p class="small"><a href="/coverage">Coverage</a></p><h1>{{ c.name }}</h1>
+    <p class="muted">{% if cov.refreshed_at %}Devices fetched from Hudu {{ cov.refreshed_at[:16]|replace('T', ' ') }} UTC.{% else %}Not fetched from Hudu yet.{% endif %}</p></div>
+  <div class="actions">
+    {% if cov.untagged %}<a class="btn quiet" href="/coverage/{{ c.id }}/untagged.csv">Export untagged (CSV)</a>{% endif %}
+    <form method="post" action="/coverage/{{ c.id }}/refresh"><button class="primary" type="submit">Refresh from Hudu</button></form>
+  </div>
+</div>
+{% if cov.error %}<div class="flash bad">The last refresh failed: {{ cov.error }}</div>{% endif %}
+{% if cov.checked %}
+<div class="stats">
+  <div class="stat"><b>{{ cov.pct if cov.pct is not none else '—' }}{{ '%' if cov.pct is not none }}</b><span>Devices tagged</span></div>
+  <div class="stat"><b>{{ cov.tagged }}</b><span>Tagged, of {{ cov.assets }}</span></div>
+  <div class="stat{{ ' alert' if cov.untagged }}"><b>{{ cov.untagged|length }}</b><span>Still to tag</span></div>
+  <div class="stat"><b>{{ cov.unlinked|length }}</b><span>Tags not linked to Hudu</span></div>
+</div>
+<section class="stack-sm">
+  <h2>Devices without a tag</h2>
+  {% if cov.untagged %}
+  <div class="tbl"><table>
+    <thead><tr><th>Device</th><th>Type</th><th>Model</th><th>Serial</th><th></th></tr></thead>
+    <tbody>{% for a in cov.untagged %}
+    <tr>
+      <td>{% if a.url %}<a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.name }}</a>{% else %}{{ a.name }}{% endif %}</td>
+      <td>{{ a.type or '—' }}</td><td>{{ a.model or '—' }}</td><td class="mono small">{{ a.serial or '—' }}</td>
+      <td class="nowrap"><a class="btn quiet sm" href="/tags/new?{{ {'client_id': c.id, 'hudu_asset_id': a.id, 'hudu_asset_url': a.url, 'device_name': a.name, 'model': a.model, 'serial': a.serial}|urlencode }}">Tag this device</a></td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<p class="muted">Every device counted here has a tag.</p>{% endif %}
+</section>
+{% endif %}
+<section class="stack-sm">
+  <h2>Tags not linked to a Hudu device</h2>
+  {% if cov.unlinked %}
+  <div class="tbl"><table>
+    <thead><tr><th>Tag</th><th>Device</th><th>Serial</th><th>Status</th></tr></thead>
+    <tbody>{% for t in cov.unlinked %}
+    <tr><td class="code"><a href="/tags/{{ t.code }}">{{ t.code }}</a></td><td>{{ t.device_name or '—' }}</td><td class="mono small">{{ t.serial or '—' }}</td>
+      <td>{{ 'Assigned' if t.status == 'active' else 'Not assigned' }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<p class="muted">None.</p>{% endif %}
+</section>
+{% endblock %}

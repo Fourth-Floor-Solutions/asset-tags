@@ -84,6 +84,7 @@ def test_hudu_sync(monkeypatch):
     from app import hudu
 
     calls = []
+    monkeypatch.setattr(hudu, "configured", lambda: True)
     monkeypatch.setattr(hudu, "write_enabled", lambda: True)
     monkeypatch.setattr(
         hudu,

@@ -47,6 +47,7 @@ def test_login_and_sso_redirects_are_safe():
 def test_hudu_link_only_on_configured_host():
     c = _admin()
     settings.save({"hudu_url": "https://hudu.example.com"})
+    settings.save_secret("hudu_api_key", "test-key")
     cid = internal_client_id(c)
     for url, kept in (
         ("javascript:alert(1)", False),

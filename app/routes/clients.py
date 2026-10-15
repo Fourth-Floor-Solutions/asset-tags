@@ -41,6 +41,7 @@ def clients_page(request: Request):
 @router.post("/clients/sync")
 def clients_sync(request: Request):
     auth.require_admin(request)
+    hudu.require()
     try:
         companies = hudu.list_companies()
     except hudu.HuduError as e:
