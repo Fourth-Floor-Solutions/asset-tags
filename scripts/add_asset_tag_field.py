@@ -7,6 +7,7 @@ so every existing field is re-sent with its id. Each layout is backed up to
 /data/hudu-backups first and checked afterwards: all previous field ids must
 still be present, plus the new field.
 """
+
 import json
 import os
 import sys
@@ -16,7 +17,8 @@ from datetime import datetime
 from app import hudu
 
 HINT = "Asset tag code. Set by TagDesk ({url}); don't edit by hand.".format(
-    url=os.environ.get("PUBLIC_BASE_URL", "").replace("https://", "").replace("http://", "") or "TagDesk")
+    url=os.environ.get("PUBLIC_BASE_URL", "").replace("https://", "").replace("http://", "") or "TagDesk"
+)
 
 
 def layout(lid):
@@ -40,10 +42,18 @@ def main(args):
         with open(path, "w") as f:
             json.dump(lay, f, indent=1)
         pos = max([f.get("position") or 0 for f in fields] + [0]) + 1
-        new = {"label": hudu.tag_label(), "field_type": "Text", "show_in_list": True,
-               "required": False, "hint": HINT, "position": pos}
-        print(f"{lid} {lay['name']}: {len(fields)} fields -> add '{hudu.tag_label()}' at position {pos}"
-              f" (backup {path})" + ("" if apply else "  [dry run]"))
+        new = {
+            "label": hudu.tag_label(),
+            "field_type": "Text",
+            "show_in_list": True,
+            "required": False,
+            "hint": HINT,
+            "position": pos,
+        }
+        print(
+            f"{lid} {lay['name']}: {len(fields)} fields -> add '{hudu.tag_label()}' at position {pos}"
+            f" (backup {path})" + ("" if apply else "  [dry run]")
+        )
         if not apply:
             continue
         hudu._request("PUT", f"/asset_layouts/{lid}", body={"asset_layout": {"fields": fields + [new]}})

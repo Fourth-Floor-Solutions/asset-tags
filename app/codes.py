@@ -3,10 +3,10 @@
 The alphabet leaves out I, L, O and U so a code can't be misread. When a code
 is typed or scanned, O is read as 0 and I/L as 1, so common slips still resolve.
 """
+
 from __future__ import annotations
 
 import re
-from typing import Optional
 
 ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 LENGTH = 5
@@ -25,7 +25,7 @@ def is_valid(code: str) -> bool:
     return len(code) == LENGTH and all(ch in ALPHABET for ch in code)
 
 
-def parse(raw: str) -> Optional[str]:
+def parse(raw: str) -> str | None:
     """Return the canonical code for user input, or None if it can't be one."""
     code = normalise(raw)
     return code if is_valid(code) else None

@@ -1,8 +1,9 @@
 """Print the release notes for a version, taken from its date in CHANGELOG.md.
 
-    python -m scripts.release_notes v0.1.0 > notes.md
-    gh release create v0.1.0 --notes-file notes.md
+python -m scripts.release_notes v0.1.0 > notes.md
+gh release create v0.1.0 --notes-file notes.md
 """
+
 import sys
 
 from app import changelog

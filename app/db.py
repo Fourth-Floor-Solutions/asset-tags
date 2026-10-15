@@ -1,17 +1,17 @@
 """SQLite storage. One file in DATA_DIR; every request opens its own connection."""
+
 from __future__ import annotations
 
 import os
 import secrets
 import sqlite3
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from . import codes
 
 DATA_DIR = os.environ.get("DATA_DIR", os.path.join(os.path.dirname(__file__), "..", "data"))
 DB_PATH = os.path.join(DATA_DIR, "tagdesk.db")
-LEGACY_DB_PATH = os.path.join(DATA_DIR, "asset-tags.db")   # name used before the app became TagDesk
+LEGACY_DB_PATH = os.path.join(DATA_DIR, "asset-tags.db")  # name used before the app became TagDesk
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -98,7 +98,7 @@ CREATE INDEX IF NOT EXISTS events_code ON events(code);
 
 
 def now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
 def connect() -> sqlite3.Connection:
@@ -117,24 +117,36 @@ def init() -> None:
     conn = connect()
     conn.execute("PRAGMA journal_mode = WAL")
     conn.executescript(SCHEMA)
-    _add_columns(conn, "users", {
-        "display_name": "TEXT NOT NULL DEFAULT ''",
-    })
-    _add_columns(conn, "printers", {
-        "chain": "INTEGER NOT NULL DEFAULT 0",      # unused: chain printing was removed (labels got stuck)
-        "last_counter_cm": "INTEGER",               # printer's lifetime print length at last read
-        "last_tape": "TEXT",                         # tape loaded at last read, e.g. "18|yellow"
-    })
-    _add_columns(conn, "tags", {
-        "hudu_pushed_asset_id": "INTEGER",          # asset whose Asset Tag field holds this code
-        "hudu_sync_status": "TEXT NOT NULL DEFAULT ''",
-        "hudu_sync_at": "TEXT",
-    })
+    _add_columns(
+        conn,
+        "users",
+        {
+            "display_name": "TEXT NOT NULL DEFAULT ''",
+        },
+    )
+    _add_columns(
+        conn,
+        "printers",
+        {
+            "chain": "INTEGER NOT NULL DEFAULT 0",  # unused: chain printing was removed (labels got stuck)
+            "last_counter_cm": "INTEGER",  # printer's lifetime print length at last read
+            "last_tape": "TEXT",  # tape loaded at last read, e.g. "18|yellow"
+        },
+    )
+    _add_columns(
+        conn,
+        "tags",
+        {
+            "hudu_pushed_asset_id": "INTEGER",  # asset whose Asset Tag field holds this code
+            "hudu_sync_status": "TEXT NOT NULL DEFAULT ''",
+            "hudu_sync_at": "TEXT",
+        },
+    )
     _migrate_printer(conn)
     # First code is picked at random in the lower half of the space so tags
     # don't start at 00000 and there is room to count upwards for decades.
     if get_setting(conn, "next_num") is None:
-        set_setting(conn, "next_num", str(secrets.randbelow(codes.SPACE // 2) + 32 ** 4))
+        set_setting(conn, "next_num", str(secrets.randbelow(codes.SPACE // 2) + 32**4))
     conn.close()
 
 
@@ -148,8 +160,10 @@ def _migrate_printer(conn) -> None:
     if not host:
         return
     nudge = int(get_setting(conn, "print_nudge_dots") or 0)
-    conn.execute("INSERT INTO printers(name, host, nudge_dots, is_default, created_at) VALUES(?,?,?,?,?)",
-                 ("PT-P950NW", host, nudge, 1, now()))
+    conn.execute(
+        "INSERT INTO printers(name, host, nudge_dots, is_default, created_at) VALUES(?,?,?,?,?)",
+        ("PT-P950NW", host, nudge, 1, now()),
+    )
 
 
 def _add_columns(conn, table: str, cols: dict) -> None:
@@ -159,15 +173,14 @@ def _add_columns(conn, table: str, cols: dict) -> None:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
 
 
-def get_setting(conn, key: str) -> Optional[str]:
+def get_setting(conn, key: str) -> str | None:
     row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
     return row["value"] if row else None
 
 
 def set_setting(conn, key: str, value: str) -> None:
     conn.execute(
-        "INSERT INTO settings(key, value) VALUES(?, ?) "
-        "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        "INSERT INTO settings(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         (key, value),
     )
 
@@ -179,10 +192,12 @@ def log(conn, code: str, actor: str, action: str, detail: str = "") -> None:
     )
 
 
-def issue_tags(conn, count: int, client_id: int, fmt: str, actor: str, fields: Optional[dict] = None) -> list:
+def issue_tags(conn, count: int, client_id: int, fmt: str, actor: str, fields: dict | None = None) -> list:
     """Allocate `count` sequential codes atomically and create their rows."""
     fields = fields or {}
-    status = "active" if fields.get("serial") or fields.get("device_name") or fields.get("hudu_asset_id") else "unassigned"
+    status = (
+        "active" if fields.get("serial") or fields.get("device_name") or fields.get("hudu_asset_id") else "unassigned"
+    )
     conn.execute("BEGIN IMMEDIATE")
     try:
         start = int(get_setting(conn, "next_num"))
@@ -197,10 +212,22 @@ def issue_tags(conn, count: int, client_id: int, fmt: str, actor: str, fields: O
                 "INSERT INTO tags(code, num, client_id, format, status, device_name, model, serial, notes, "
                 "hudu_asset_id, hudu_asset_url, created_by, created_at, updated_at) "
                 "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                (code, num, client_id, fmt, status,
-                 fields.get("device_name", ""), fields.get("model", ""), fields.get("serial", ""),
-                 fields.get("notes", ""), fields.get("hudu_asset_id"), fields.get("hudu_asset_url", ""),
-                 actor, ts, ts),
+                (
+                    code,
+                    num,
+                    client_id,
+                    fmt,
+                    status,
+                    fields.get("device_name", ""),
+                    fields.get("model", ""),
+                    fields.get("serial", ""),
+                    fields.get("notes", ""),
+                    fields.get("hudu_asset_id"),
+                    fields.get("hudu_asset_url", ""),
+                    actor,
+                    ts,
+                    ts,
+                ),
             )
             log(conn, code, actor, "issued", "batch" if count > 1 else "")
             out.append(code)

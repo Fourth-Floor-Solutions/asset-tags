@@ -3,12 +3,11 @@ into each linked asset's "Asset Tag" custom field.
 
 Calls are paced because bursts trip Hudu's transient rate block.
 """
+
 from __future__ import annotations
 
 import json
-import os
 import time
-from typing import Optional
 
 import httpx
 
@@ -37,7 +36,7 @@ def base_url() -> str:
     return settings.get("hudu_url").rstrip("/")
 
 
-def _request(method: str, path: str, params: Optional[dict] = None, body: Optional[dict] = None) -> object:
+def _request(method: str, path: str, params: dict | None = None, body: dict | None = None) -> object:
     if not configured():
         raise HuduError("Hudu isn't set up. Add its address and API key in Settings.")
     try:
@@ -74,7 +73,7 @@ def list_companies() -> list:
         time.sleep(PAUSE)
 
 
-def _abs(url: Optional[str]) -> str:
+def _abs(url: str | None) -> str:
     if not url:
         return ""
     return url if url.startswith("http") else f"{base_url()}{url}"
@@ -133,6 +132,7 @@ def search_assets(company_id: int, query: str) -> list:
 
 # ---------- Asset Tag field write-back ----------
 
+
 def tag_label() -> str:
     from . import settings
 
@@ -151,7 +151,7 @@ def field_key(label: str) -> str:
     return label.strip().lower().replace(" ", "_")
 
 
-def get_asset(asset_id: int) -> Optional[dict]:
+def get_asset(asset_id: int) -> dict | None:
     data = _get("/assets", {"id": asset_id})
     assets = data.get("assets", []) if isinstance(data, dict) else []
     return assets[0] if assets else None
@@ -196,8 +196,11 @@ def _norm(v) -> str:
 
 
 def _put(asset: dict, values: dict) -> None:
-    body = {"name": asset["name"], "asset_layout_id": asset["asset_layout_id"],
-            "custom_fields": [{k: v} for k, v in values.items()]}
+    body = {
+        "name": asset["name"],
+        "asset_layout_id": asset["asset_layout_id"],
+        "custom_fields": [{k: v} for k, v in values.items()],
+    }
     for k in ("primary_serial", "primary_model", "primary_manufacturer", "primary_mail"):
         if asset.get(k) is not None:
             body[k] = asset[k]
@@ -205,7 +208,7 @@ def _put(asset: dict, values: dict) -> None:
     time.sleep(PAUSE)
 
 
-def set_tag(asset_id: int, value: str, only_if: Optional[str] = None) -> str:
+def set_tag(asset_id: int, value: str, only_if: str | None = None) -> str:
     """Write `value` (a code, or "" to clear) into the asset's Asset Tag field.
 
     Hudu's PUT replaces every custom field, so all current values are re-sent
@@ -233,12 +236,14 @@ def set_tag(asset_id: int, value: str, only_if: Optional[str] = None) -> str:
     _put(asset, wanted)
     after_asset = get_asset(asset_id) or {}
     after = _values(after_asset)
-    changed = [k for k in set(before) | set(after)
-               if k != key and _norm(before.get(k)) != _norm(after.get(k))]
+    changed = [k for k in set(before) | set(after) if k != key and _norm(before.get(k)) != _norm(after.get(k))]
     if changed or _norm(after.get(key)) != value:
         restore = {k: v for k, v in before.items() if v is not None}
-        restore[key] = before.get(key) or ""   # an omitted key is left as is, so reset it explicitly
+        restore[key] = before.get(key) or ""  # an omitted key is left as is, so reset it explicitly
         _put(asset, restore)
-        raise HuduError("Hudu didn't keep the other fields as sent (" + ", ".join(sorted(changed)) +
-                        "). The original values were written back; nothing was changed.")
+        raise HuduError(
+            "Hudu didn't keep the other fields as sent ("
+            + ", ".join(sorted(changed))
+            + "). The original values were written back; nothing was changed."
+        )
     return "cleared" if value == "" else "written"

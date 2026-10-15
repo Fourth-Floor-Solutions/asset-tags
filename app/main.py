@@ -1,4 +1,5 @@
 """TagDesk: issue, print and look up client-branded asset tags."""
+
 from __future__ import annotations
 
 import os
@@ -6,7 +7,6 @@ import re
 import secrets
 import time
 from collections import defaultdict, deque
-from typing import Optional
 from urllib.parse import quote
 
 from fastapi import FastAPI, Form, Request
@@ -68,12 +68,14 @@ templates.env.globals["static"] = lambda name: f"/static/{name}?v={_VERSIONS.get
 SETUP_EXEMPT = ("/setup", "/static/", "/favicon", "/login", "/logout", "/auth/", "/healthz", "/version", "/changelog")
 
 
-CSP = ("default-src 'self'; "
-       "script-src 'self' 'unsafe-inline'; "
-       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-       "font-src 'self' https://fonts.gstatic.com; "
-       "img-src 'self' data:; connect-src 'self'; "
-       "frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'")
+CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com; "
+    "img-src 'self' data:; connect-src 'self'; "
+    "frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"
+)
 SECURITY_HEADERS = {
     "Content-Security-Policy": CSP,
     "X-Content-Type-Options": "nosniff",
@@ -95,7 +97,7 @@ def _origin_ok(request: Request) -> bool:
 
     origin = request.headers.get("origin") or request.headers.get("referer")
     if not origin or origin == "null":
-        return origin is None                     # no header at all: non-browser client
+        return origin is None  # no header at all: non-browser client
     allowed = {urlparse(PUBLIC_BASE_URL).netloc.lower(), (request.headers.get("host") or "").lower()}
     return urlparse(origin).netloc.lower() in allowed
 
@@ -116,8 +118,13 @@ async def load_user(request: Request, call_next):
     request.state.user = auth.session_user(request)
     user = request.state.user
     # A new install sends its first admin to the setup screen until it's saved.
-    if (user and user["role"] == "admin" and request.method == "GET"
-            and not request.url.path.startswith(SETUP_EXEMPT) and not settings.setup_done()):
+    if (
+        user
+        and user["role"] == "admin"
+        and request.method == "GET"
+        and not request.url.path.startswith(SETUP_EXEMPT)
+        and not settings.setup_done()
+    ):
         return RedirectResponse("/setup", status_code=303)
     return await call_next(request)
 
@@ -139,11 +146,13 @@ async def _login_required(request: Request, exc):
 
 @app.exception_handler(auth.Forbidden)
 async def _forbidden(request: Request, exc):
-    return page(request, "message.html", status_code=403,
-                heading="Admins only", body="Ask an admin to make this change.")
+    return page(
+        request, "message.html", status_code=403, heading="Admins only", body="Ask an admin to make this change."
+    )
 
 
 # ---------- helpers ----------
+
 
 def tag_streams(rows: int = 16, per_row: int = 40) -> list:
     """Random-looking tag codes for the sign-in page's decorative background."""
@@ -223,7 +232,7 @@ def hudu_needs_sync(tag) -> bool:
     return desired != tag["hudu_pushed_asset_id"] or (desired is not None and not status.startswith(HUDU_OK))
 
 
-def hudu_sync(conn, code: str, actor: str, force: bool = False) -> Optional[str]:
+def hudu_sync(conn, code: str, actor: str, force: bool = False) -> str | None:
     """Keep the linked Hudu asset's Asset Tag field in step with this tag.
 
     Writes the code to the linked asset, clears it from a previously linked
@@ -254,8 +263,10 @@ def hudu_sync(conn, code: str, actor: str, force: bool = False) -> Optional[str]
         status = "error: " + error
     elif desired:
         status = notes[-1].split(": ", 1)[1]
-    conn.execute("UPDATE tags SET hudu_pushed_asset_id=?, hudu_sync_status=?, hudu_sync_at=? WHERE code=?",
-                 (pushed, status, db.now(), code))
+    conn.execute(
+        "UPDATE tags SET hudu_pushed_asset_id=?, hudu_sync_status=?, hudu_sync_at=? WHERE code=?",
+        (pushed, status, db.now(), code),
+    )
     db.log(conn, code, actor, "hudu", "; ".join(notes))
     return error
 
@@ -288,8 +299,7 @@ def safe_next(target: str) -> str:
     and control characters.
     """
     t = (target or "").strip()
-    if (not t.startswith("/") or t.startswith("//") or t.startswith("/\\") or "\\" in t
-            or any(ord(ch) < 32 for ch in t)):
+    if not t.startswith("/") or t.startswith("//") or t.startswith("/\\") or "\\" in t or any(ord(ch) < 32 for ch in t):
         return "/"
     return t
 
@@ -301,11 +311,11 @@ def tel_link(phone: str) -> str:
     return re.sub(r"[^\d+]", "", re.sub(r"\(0\)", "", phone or ""))
 
 
-def clean(v: Optional[str], limit: int = 200) -> str:
+def clean(v: str | None, limit: int = 200) -> str:
     return (v or "").strip()[:limit]
 
 
-def check_format(conn, client_id: int, fmt: str, current_format: str = None) -> Optional[str]:
+def check_format(conn, client_id: int, fmt: str, current_format: str = None) -> str | None:
     if fmt not in labels.FORMATS:
         return "Choose a label format."
     if not labels.FORMATS[fmt].get("enabled", True) and fmt != current_format:
@@ -315,12 +325,14 @@ def check_format(conn, client_id: int, fmt: str, current_format: str = None) -> 
         return "Choose a client."
     if fmt == "loan" and not c["is_internal"]:
         own = conn.execute("SELECT name FROM clients WHERE is_internal = 1 LIMIT 1").fetchone()
-        return ("Loan tags are only for your own kit. "
-                + (f"Choose {own['name']} as the client." if own else "Set your organisation's client in Settings first."))
+        return "Loan tags are only for your own kit. " + (
+            f"Choose {own['name']} as the client." if own else "Set your organisation's client in Settings first."
+        )
     return None
 
 
 # ---------- health & auth ----------
+
 
 @app.get("/favicon.ico")
 def favicon_ico():
@@ -331,14 +343,17 @@ def favicon_ico():
 def favicon_svg():
     """The organisation's short mark on its accent colour."""
     from html import escape
+
     from starlette.responses import Response
 
     org = settings.get_all()
     mark = escape((org["org_mark"] or "TD")[:3])
     size = 15 if len(mark) <= 2 else 11
-    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" '
-           f'fill="{escape(org["accent"])}"/><text x="16" y="22" text-anchor="middle" font-family="Menlo, monospace" '
-           f'font-weight="800" font-size="{size}" fill="#111">{mark}</text></svg>')
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" '
+        f'fill="{escape(org["accent"])}"/><text x="16" y="22" text-anchor="middle" font-family="Menlo, monospace" '
+        f'font-weight="800" font-size="{size}" fill="#111">{mark}</text></svg>'
+    )
     return Response(svg, media_type="image/svg+xml", headers={"Cache-Control": "public, max-age=300"})
 
 
@@ -350,8 +365,15 @@ def whats_new(request: Request):
         error = None
     except (OSError, changelog.ChangelogError) as e:
         days, error = [], str(e)
-    return page(request, "changelog.html", days=days, error=error, types=changelog.TYPES,
-                inline=changelog.inline_html, day_label=changelog.label)
+    return page(
+        request,
+        "changelog.html",
+        days=days,
+        error=error,
+        types=changelog.TYPES,
+        inline=changelog.inline_html,
+        day_label=changelog.label,
+    )
 
 
 @app.get("/version")
@@ -387,14 +409,21 @@ def _login_blocked(ip: str) -> bool:
 def login(request: Request, username: str = Form(...), password: str = Form(...), next: str = Form("/")):
     ip = request.client.host if request.client else "?"
     if _login_blocked(ip):
-        return page(request, "login.html", status_code=429, next=next,
-                    error="Too many failed sign-ins. Wait 15 minutes and try again.")
+        return page(
+            request,
+            "login.html",
+            status_code=429,
+            next=next,
+            error="Too many failed sign-ins. Wait 15 minutes and try again.",
+        )
     conn = db.connect()
     try:
         # Accept either the username or the account's email address.
         who = username.strip()
-        row = conn.execute("SELECT * FROM users WHERE username = ? OR (email != '' AND email = ?) "
-                           "ORDER BY username = ? DESC LIMIT 1", (who, who, who)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM users WHERE username = ? OR (email != '' AND email = ?) ORDER BY username = ? DESC LIMIT 1",
+            (who, who, who),
+        ).fetchone()
     finally:
         conn.close()
     # Always run the password hash, so unknown usernames take as long as wrong passwords.
@@ -430,17 +459,29 @@ async def sso_callback(request: Request):
     try:
         token = await client.entra.authorize_access_token(request)
     except Exception:
-        return page(request, "login.html", status_code=401, next="/", error="Microsoft sign-in didn't complete. Try again.")
+        return page(
+            request, "login.html", status_code=401, next="/", error="Microsoft sign-in didn't complete. Try again."
+        )
     info = token.get("userinfo") or {}
     cfg = auth.sso_config()
     if cfg and auth.GUID_RE.match(cfg[0]) and (info.get("tid") or "").lower() != cfg[0].lower():
-        return page(request, "login.html", status_code=403, next="/",
-                    error="That Microsoft account belongs to a different organisation.")
+        return page(
+            request,
+            "login.html",
+            status_code=403,
+            next="/",
+            error="That Microsoft account belongs to a different organisation.",
+        )
     email = info.get("email") or info.get("preferred_username") or ""
     row = auth.sso_user_for(email, info.get("name") or "")
     if not row:
-        return page(request, "login.html", status_code=403, next="/",
-                    error=f"{email or 'That account'} doesn't have access. Ask an admin to add you.")
+        return page(
+            request,
+            "login.html",
+            status_code=403,
+            next="/",
+            error=f"{email or 'That account'} doesn't have access. Ask an admin to add you.",
+        )
     nxt = safe_next(request.session.pop("sso_next", "/"))
     request.session.clear()
     request.session["uid"] = row["id"]
@@ -448,6 +489,7 @@ async def sso_callback(request: Request):
 
 
 # ---------- dashboard ----------
+
 
 @app.get("/", response_class=HTMLResponse)
 def dashboard(request: Request, q: str = "", client_id: str = "", status: str = ""):
@@ -464,8 +506,10 @@ def dashboard(request: Request, q: str = "", client_id: str = "", status: str = 
     where, args = [], []
     if q:
         like = f"%{q}%"
-        where.append("(t.code LIKE ? OR t.serial LIKE ? OR t.device_name LIKE ? OR t.model LIKE ? "
-                     "OR c.name LIKE ? OR c.label_name LIKE ? OR t.notes LIKE ?)")
+        where.append(
+            "(t.code LIKE ? OR t.serial LIKE ? OR t.device_name LIKE ? OR t.model LIKE ? "
+            "OR c.name LIKE ? OR c.label_name LIKE ? OR t.notes LIKE ?)"
+        )
         args += [f"%{codes.normalise(q)}%", like, like, like, like, like, like]
     if client_id.isdigit():
         where.append("t.client_id = ?")
@@ -478,16 +522,30 @@ def dashboard(request: Request, q: str = "", client_id: str = "", status: str = 
     try:
         rows = conn.execute(sql, args).fetchall()
         counts = {r["status"]: r["n"] for r in conn.execute("SELECT status, COUNT(*) n FROM tags GROUP BY status")}
-        reprints = [r for r in conn.execute(db.TAG_SELECT + " WHERE t.printed_as IS NOT NULL AND t.status != 'retired'")
-                    if needs_reprint(r)]
+        reprints = [
+            r
+            for r in conn.execute(db.TAG_SELECT + " WHERE t.printed_as IS NOT NULL AND t.status != 'retired'")
+            if needs_reprint(r)
+        ]
         cl = clients(conn)
     finally:
         conn.close()
-    return page(request, "dashboard.html", tags=rows, q=q, client_id=client_id, status=status,
-                counts=counts, reprint_count=len(reprints), clients=cl, needs_reprint=needs_reprint)
+    return page(
+        request,
+        "dashboard.html",
+        tags=rows,
+        q=q,
+        client_id=client_id,
+        status=status,
+        counts=counts,
+        reprint_count=len(reprints),
+        clients=cl,
+        needs_reprint=needs_reprint,
+    )
 
 
 # ---------- issuing ----------
+
 
 @app.get("/tags/new", response_class=HTMLResponse)
 def tag_new_form(request: Request, client_id: str = ""):
@@ -501,12 +559,22 @@ def tag_new_form(request: Request, client_id: str = ""):
 
 
 @app.post("/tags/new")
-def tag_new(request: Request, client_id: int = Form(...), format: str = Form("standard"),
-            device_name: str = Form(""), model: str = Form(""), serial: str = Form(""), notes: str = Form(""),
-            hudu_asset_id: str = Form(""), hudu_asset_url: str = Form("")):
+def tag_new(
+    request: Request,
+    client_id: int = Form(...),
+    format: str = Form("standard"),
+    device_name: str = Form(""),
+    model: str = Form(""),
+    serial: str = Form(""),
+    notes: str = Form(""),
+    hudu_asset_id: str = Form(""),
+    hudu_asset_url: str = Form(""),
+):
     user = auth.require_user(request)
     fields = {
-        "device_name": clean(device_name, 120), "model": clean(model, 120), "serial": clean(serial, 120),
+        "device_name": clean(device_name, 120),
+        "model": clean(model, 120),
+        "serial": clean(serial, 120),
         "notes": clean(notes, 2000),
         "hudu_asset_id": int(hudu_asset_id) if hudu_asset_id.isdigit() else None,
         "hudu_asset_url": hudu_link(hudu_asset_url) if hudu_asset_id.isdigit() else "",
@@ -515,13 +583,21 @@ def tag_new(request: Request, client_id: int = Form(...), format: str = Form("st
     try:
         err = check_format(conn, client_id, format)
         if not err and fields["serial"]:
-            dup = conn.execute("SELECT code FROM tags WHERE serial = ? AND status != 'retired'",
-                               (fields["serial"],)).fetchone()
+            dup = conn.execute(
+                "SELECT code FROM tags WHERE serial = ? AND status != 'retired'", (fields["serial"],)
+            ).fetchone()
             if dup:
                 err = f"Serial {fields['serial']} is already tagged as {dup['code']}. Open that tag instead."
         if err:
-            return page(request, "tag_new.html", status_code=400, clients=clients(conn),
-                        sel_client=str(client_id), form=dict(fields, format=format), error=err)
+            return page(
+                request,
+                "tag_new.html",
+                status_code=400,
+                clients=clients(conn),
+                sel_client=str(client_id),
+                form=dict(fields, format=format),
+                error=err,
+            )
         code = db.issue_tags(conn, 1, client_id, format, auth.label(user), fields)[0]
         herr = hudu_sync(conn, code, auth.label(user))
     finally:
@@ -545,8 +621,13 @@ def batch_form(request: Request):
 
 
 @app.post("/tags/batch")
-def batch(request: Request, client_id: int = Form(...), format: str = Form("standard"), count: int = Form(...),
-          cut: str = Form("strip")):
+def batch(
+    request: Request,
+    client_id: int = Form(...),
+    format: str = Form("standard"),
+    count: int = Form(...),
+    cut: str = Form("strip"),
+):
     user = auth.require_user(request)
     conn = db.connect()
     try:
@@ -563,34 +644,63 @@ def batch(request: Request, client_id: int = Form(...), format: str = Form("stan
 
 # ---------- one tag ----------
 
+
 @app.get("/tags/{code}", response_class=HTMLResponse)
 def tag_detail(request: Request, code: str):
     auth.require_user(request)
     canon = codes.parse(code)
     if not canon:
-        return page(request, "message.html", status_code=404, heading="Not a tag code",
-                    body="Tag codes are five characters, like 7KQ3M.")
+        return page(
+            request,
+            "message.html",
+            status_code=404,
+            heading="Not a tag code",
+            body="Tag codes are five characters, like 7KQ3M.",
+        )
     if canon != code:
         return go(f"/tags/{canon}")
     conn = db.connect()
     try:
         tag = db.get_tag(conn, canon)
         if not tag:
-            return page(request, "message.html", status_code=404, heading=f"{canon} hasn't been issued",
-                        body="No tag with this code exists. Check the code on the label, or issue a new tag.")
+            return page(
+                request,
+                "message.html",
+                status_code=404,
+                heading=f"{canon} hasn't been issued",
+                body="No tag with this code exists. Check the code on the label, or issue a new tag.",
+            )
         events = conn.execute("SELECT * FROM events WHERE code = ? ORDER BY id DESC", (canon,)).fetchall()
         cl = clients(conn, include_inactive=True)
     finally:
         conn.close()
-    return page(request, "tag.html", tag=tag, svg=svg_for(tag), events=events, clients=cl,
-                hudu_write=hudu.write_enabled(), hudu_field=hudu.tag_label(),
-                reprint=needs_reprint(tag), qr_url=labels.qr_data(PUBLIC_BASE_URL, canon))
+    return page(
+        request,
+        "tag.html",
+        tag=tag,
+        svg=svg_for(tag),
+        events=events,
+        clients=cl,
+        hudu_write=hudu.write_enabled(),
+        hudu_field=hudu.tag_label(),
+        reprint=needs_reprint(tag),
+        qr_url=labels.qr_data(PUBLIC_BASE_URL, canon),
+    )
 
 
 @app.post("/tags/{code}")
-def tag_update(request: Request, code: str, client_id: int = Form(...), format: str = Form(...),
-               device_name: str = Form(""), model: str = Form(""), serial: str = Form(""), notes: str = Form(""),
-               hudu_asset_id: str = Form(""), hudu_asset_url: str = Form("")):
+def tag_update(
+    request: Request,
+    code: str,
+    client_id: int = Form(...),
+    format: str = Form(...),
+    device_name: str = Form(""),
+    model: str = Form(""),
+    serial: str = Form(""),
+    notes: str = Form(""),
+    hudu_asset_id: str = Form(""),
+    hudu_asset_url: str = Form(""),
+):
     user = auth.require_user(request)
     conn = db.connect()
     try:
@@ -602,8 +712,11 @@ def tag_update(request: Request, code: str, client_id: int = Form(...), format: 
             flash(request, err, "bad")
             return go(f"/tags/{code}")
         new = {
-            "client_id": client_id, "format": format,
-            "device_name": clean(device_name, 120), "model": clean(model, 120), "serial": clean(serial, 120),
+            "client_id": client_id,
+            "format": format,
+            "device_name": clean(device_name, 120),
+            "model": clean(model, 120),
+            "serial": clean(serial, 120),
             "notes": clean(notes, 2000),
             "hudu_asset_id": int(hudu_asset_id) if hudu_asset_id.isdigit() else None,
             "hudu_asset_url": hudu_link(hudu_asset_url) if hudu_asset_id.isdigit() else "",
@@ -627,8 +740,19 @@ def tag_update(request: Request, code: str, client_id: int = Form(...), format: 
         conn.execute(
             "UPDATE tags SET client_id=?, format=?, device_name=?, model=?, serial=?, notes=?, hudu_asset_id=?, "
             "hudu_asset_url=?, status=?, updated_at=? WHERE code=?",
-            (new["client_id"], new["format"], new["device_name"], new["model"], new["serial"], new["notes"],
-             new["hudu_asset_id"], new["hudu_asset_url"], status, db.now(), code),
+            (
+                new["client_id"],
+                new["format"],
+                new["device_name"],
+                new["model"],
+                new["serial"],
+                new["notes"],
+                new["hudu_asset_id"],
+                new["hudu_asset_url"],
+                status,
+                db.now(),
+                code,
+            ),
         )
         db.log(conn, code, auth.label(user), "edited", "; ".join(changes))
         herr = hudu_sync(conn, code, auth.label(user))
@@ -698,12 +822,16 @@ def hudu_sync_all(request: Request):
                 done += 1
     finally:
         conn.close()
-    flash(request, f"Hudu updated for {done} tag(s)" + (f"; {failed} failed, open them to see why." if failed else "."),
-          "warn" if failed else "ok")
+    flash(
+        request,
+        f"Hudu updated for {done} tag(s)" + (f"; {failed} failed, open them to see why." if failed else "."),
+        "warn" if failed else "ok",
+    )
     return go("/clients")
 
 
 # ---------- printing ----------
+
 
 def _print_codes(raw: str) -> list:
     out = []
@@ -730,10 +858,18 @@ def print_sheet(request: Request, batch: str = "", cut: str = ""):
     plan, waiting = printer.route(tags, pstats)
     names = {x["p"]["id"]: x["p"]["name"] for x in pstats}
     target = {t["code"]: names[pid] for pid, ts in plan.items() for t in ts}
-    return page(request, "print.html", items=items, used_formats=used, batch=batch == "1",
-                cut_choice=cut if cut in ("cut", "strip") else "",
-                pstats=pstats, target=target, n_ready=len(target),
-                code_list=",".join(t["code"] for t in tags))
+    return page(
+        request,
+        "print.html",
+        items=items,
+        used_formats=used,
+        batch=batch == "1",
+        cut_choice=cut if cut in ("cut", "strip") else "",
+        pstats=pstats,
+        target=target,
+        n_ready=len(target),
+        code_list=",".join(t["code"] for t in tags),
+    )
 
 
 def record_printed(conn, tags: list, actor: str, how: str) -> int:
@@ -758,7 +894,7 @@ def print_record(request: Request, codes_csv: str = Form(..., alias="codes")):
     return JSONResponse({"recorded": n})
 
 
-NUDGE_LIMIT = 40   # dots (about 2.8 mm) either way
+NUDGE_LIMIT = 40  # dots (about 2.8 mm) either way
 
 
 def printers_live() -> list:
@@ -791,8 +927,10 @@ def print_send(request: Request, codes_csv: str = Form(..., alias="codes"), stri
     user = auth.require_user(request)
     pstats = printers_live()
     if not pstats:
-        return JSONResponse({"ok": False, "message": "No label printer is set up. An admin can add one on the Printer page."},
-                            status_code=502)
+        return JSONResponse(
+            {"ok": False, "message": "No label printer is set up. An admin can add one on the Printer page."},
+            status_code=502,
+        )
     conn = db.connect()
     printed, notes, problems = [], [], []
     try:
@@ -806,8 +944,10 @@ def print_send(request: Request, codes_csv: str = Form(..., alias="codes"), stri
                 continue
             p, st = x["p"], x["st"]
             org = settings.get_all()
-            images = [labels.raster(t["format"], t["code"], label_name(t, org), PUBLIC_BASE_URL, text=label_text(org))
-                      for t in batch]
+            images = [
+                labels.raster(t["format"], t["code"], label_name(t, org), PUBLIC_BASE_URL, text=label_text(org))
+                for t in batch
+            ]
             try:
                 printer.send(p["host"], printer.build_job(images, st["tape_mm"], p["nudge_dots"], strip=strip == "1"))
             except printer.PrinterError as e:
@@ -823,8 +963,10 @@ def print_send(request: Request, codes_csv: str = Form(..., alias="codes"), stri
             if left and left["low"]:
                 problems.append(f"Tape is low in {p['name']}: about {left['left_cm'] / 100:.1f} m left.")
             printed += batch
-            notes.append(f"{_plural(len(batch))} on {p['name']} ({st['tape_mm']} mm {st['tape_colour']})"
-                         + (" as one strip with cut lines" if strip == "1" and len(batch) > 1 else ""))
+            notes.append(
+                f"{_plural(len(batch))} on {p['name']} ({st['tape_mm']} mm {st['tape_colour']})"
+                + (" as one strip with cut lines" if strip == "1" and len(batch) > 1 else "")
+            )
     finally:
         conn.close()
     if printed:
@@ -837,8 +979,14 @@ def print_send(request: Request, codes_csv: str = Form(..., alias="codes"), stri
         msg += f" {_plural(len(waiting))} still to print: load {', '.join(need)} in a printer and press Print again."
     if problems:
         msg += " " + " ".join(problems)
-    return JSONResponse({"ok": bool(printed) and not problems, "message": msg.strip(),
-                         "printed": [t["code"] for t in printed], "waiting": [t["code"] for t in waiting]})
+    return JSONResponse(
+        {
+            "ok": bool(printed) and not problems,
+            "message": msg.strip(),
+            "printed": [t["code"] for t in printed],
+            "waiting": [t["code"] for t in waiting],
+        }
+    )
 
 
 @app.get("/printer", response_class=HTMLResponse)
@@ -863,7 +1011,7 @@ def _printer_form(name: str, address: str):
     if not host:
         return None, None, "Enter the printer's IP address or host name, for example 192.168.1.50."
     if not name:
-        return None, None, "Give the printer a name, for example \"Office label printer\"."
+        return None, None, 'Give the printer a name, for example "Office label printer".'
     return name, host, None
 
 
@@ -918,8 +1066,10 @@ def printer_new(request: Request, name: str = Form(""), address: str = Form(""))
     conn = db.connect()
     try:
         first = conn.execute("SELECT COUNT(*) FROM printers").fetchone()[0] == 0
-        conn.execute("INSERT INTO printers(name, host, nudge_dots, is_default, created_at) VALUES(?,?,0,?,?)",
-                     (name, host, 1 if first else 0, db.now()))
+        conn.execute(
+            "INSERT INTO printers(name, host, nudge_dots, is_default, created_at) VALUES(?,?,0,?,?)",
+            (name, host, 1 if first else 0, db.now()),
+        )
     finally:
         conn.close()
     flash(request, *_check_message(name, host))
@@ -931,8 +1081,9 @@ def _get_printer(conn, pid: int):
 
 
 @app.post("/printers/{pid}")
-def printer_update(request: Request, pid: int, name: str = Form(""), address: str = Form(""),
-                   dots: int = Form(0), then: str = Form("")):
+def printer_update(
+    request: Request, pid: int, name: str = Form(""), address: str = Form(""), dots: int = Form(0), then: str = Form("")
+):
     auth.require_admin(request)
     name, host, err = _printer_form(name, address)
     if err:
@@ -1000,10 +1151,20 @@ def printer_test(request: Request, pid: int):
     except printer.PrinterError as e:
         flash(request, str(e), "bad")
         return go("/printer")
-    fmt = next((k for k in ("slim", "standard", "micro", "loan")
-                if labels.FORMATS[k].get("enabled", True) and not printer.check_tape(st, k)), None)
+    fmt = next(
+        (
+            k
+            for k in ("slim", "standard", "micro", "loan")
+            if labels.FORMATS[k].get("enabled", True) and not printer.check_tape(st, k)
+        ),
+        None,
+    )
     if not fmt:
-        flash(request, f"None of the tag formats fit the tape in {p['name']} ({st['tape_mm']} mm {st['tape_colour']}).", "bad")
+        flash(
+            request,
+            f"None of the tag formats fit the tape in {p['name']} ({st['tape_mm']} mm {st['tape_colour']}).",
+            "bad",
+        )
         return go("/printer")
     image = labels.raster(fmt, "TEST0", "Test print", PUBLIC_BASE_URL, text=label_text())
     try:
@@ -1012,8 +1173,11 @@ def printer_test(request: Request, pid: int):
         flash(request, str(e), "bad")
         return go("/printer")
     problem = printer.wait_done(p["host"])
-    flash(request, problem or f"Test label sent to {p['name']} ({labels.FORMATS[fmt]['name']} format).",
-          "bad" if problem else "ok")
+    flash(
+        request,
+        problem or f"Test label sent to {p['name']} ({labels.FORMATS[fmt]['name']} format).",
+        "bad" if problem else "ok",
+    )
     return go("/printer")
 
 
@@ -1056,8 +1220,11 @@ def secret_import(request: Request, key: str):
     settings.save_secret(key, info["value"])
     settings.audit(auth.label(user), key, "copied from .env into Settings")
     env_name = settings.ENV_WINS[key]
-    flash(request, f"Copied into Settings. Remove {env_name} from the server's .env and restart the app to manage it here; "
-                   f"until then the .env value is still used.")
+    flash(
+        request,
+        f"Copied into Settings. Remove {env_name} from the server's .env and restart the app to manage it here; "
+        f"until then the .env value is still used.",
+    )
     return go("/settings#integrations")
 
 
@@ -1077,7 +1244,9 @@ def settings_test_sso(request: Request):
     auth.require_admin(request)
     cfg = auth.sso_config()
     if cfg is None:
-        flash(request, "Microsoft sign-in isn't fully set up: it needs the tenant ID, client ID and client secret.", "bad")
+        flash(
+            request, "Microsoft sign-in isn't fully set up: it needs the tenant ID, client ID and client secret.", "bad"
+        )
         return go("/settings#integrations")
     import httpx
 
@@ -1087,11 +1256,15 @@ def settings_test_sso(request: Request):
     except (httpx.HTTPError, ValueError):
         ok = False
     if ok:
-        flash(request, "Microsoft sign-in settings look right: the tenant was found. Sign out and use "
-                       "Sign in with Microsoft to check the client ID and secret.")
+        flash(
+            request,
+            "Microsoft sign-in settings look right: the tenant was found. Sign out and use "
+            "Sign in with Microsoft to check the client ID and secret.",
+        )
     else:
         flash(request, "Microsoft couldn't find that tenant. Check the tenant ID.", "bad")
     return go("/settings#integrations")
+
 
 def _settings_page(request: Request, setup: bool, error: str = "", form: dict = None):
     conn = db.connect()
@@ -1103,15 +1276,22 @@ def _settings_page(request: Request, setup: bool, error: str = "", form: dict = 
     s = form or settings.get_all()
     if not s.get("internal_client_id") and internal:
         s = dict(s, internal_client_id=str(internal["id"]))
-    return page(request, "settings.html", status_code=400 if error else 200, setup=setup, s=s, error=error,
-                tape_colours=list(labels.TAPE_FILLS),
-                clients=cl, preview=label_text(s) if not error else None,
-                env={"public_url": PUBLIC_BASE_URL, "sso": auth.sso_enabled(),
-                     "printer_count": len(printers_live_rows())},
-                src={k: settings.source(k) for k in settings.ENV_WINS},
-                env_names=settings.ENV_WINS,
-                secrets={k: settings.secret_info(k) for k in settings.SECRET_KEYS},
-                audit=settings.recent_audit())
+    return page(
+        request,
+        "settings.html",
+        status_code=400 if error else 200,
+        setup=setup,
+        s=s,
+        error=error,
+        tape_colours=list(labels.TAPE_FILLS),
+        clients=cl,
+        preview=label_text(s) if not error else None,
+        env={"public_url": PUBLIC_BASE_URL, "sso": auth.sso_enabled(), "printer_count": len(printers_live_rows())},
+        src={k: settings.source(k) for k in settings.ENV_WINS},
+        env_names=settings.ENV_WINS,
+        secrets={k: settings.secret_info(k) for k in settings.SECRET_KEYS},
+        audit=settings.recent_audit(),
+    )
 
 
 def printers_live_rows() -> list:
@@ -1174,7 +1354,7 @@ async def settings_save(request: Request):
     # Format settings only change when the form included the format table.
     formats_shown = data.get("formats_shown") == "1"
     fmt_over = {}
-    for key, base in (labels.BUILT_IN.items() if formats_shown else []):
+    for key, base in labels.BUILT_IN.items() if formats_shown else []:
         colour = data.get(f"fmt_{key}_colour", base["tape_colour"])
         fmt_over[key] = {
             "enabled": bool(data.get(f"fmt_{key}_enabled")),
@@ -1190,8 +1370,11 @@ async def settings_save(request: Request):
         # Your organisation's own client (used for loan tags). Create one if asked or if none exists.
         cid = v["internal_client_id"]
         if cid == "new" or (not cid and not conn.execute("SELECT 1 FROM clients WHERE is_internal = 1").fetchone()):
-            conn.execute("INSERT INTO clients(hudu_id, name, label_name, is_internal, active, updated_at) "
-                         "VALUES(NULL,?,?,1,1,?)", (v["org_name"], v["org_short"][:40], db.now()))
+            conn.execute(
+                "INSERT INTO clients(hudu_id, name, label_name, is_internal, active, updated_at) "
+                "VALUES(NULL,?,?,1,1,?)",
+                (v["org_name"], v["org_short"][:40], db.now()),
+            )
             cid = str(conn.execute("SELECT last_insert_rowid()").fetchone()[0])
         if cid.isdigit():
             conn.execute("UPDATE clients SET is_internal = CASE WHEN id = ? THEN 1 ELSE 0 END", (int(cid),))
@@ -1199,10 +1382,17 @@ async def settings_save(request: Request):
     finally:
         conn.close()
     env_set = {k for k in settings.ENV_WINS if settings.source(k) == "env"}
-    if (v["hudu_url"] != before["hudu_url"] and before["hudu_url"] and "hudu_api_key" not in env_set
-            and settings.secret_info("hudu_api_key")["status"] == "set" and not (data.get("hudu_api_key") or "").strip()):
+    if (
+        v["hudu_url"] != before["hudu_url"]
+        and before["hudu_url"]
+        and "hudu_api_key" not in env_set
+        and settings.secret_info("hudu_api_key")["status"] == "set"
+        and not (data.get("hudu_api_key") or "").strip()
+    ):
         # Don't send a saved key to a different server without the admin re-entering it.
-        return _settings_page(request, setup, error="You changed the Hudu address: enter the API key again too.", form=v)
+        return _settings_page(
+            request, setup, error="You changed the Hudu address: enter the API key again too.", form=v
+        )
     to_save = {k: val for k, val in v.items() if k not in env_set}
     to_save["source_url"] = to_save.get("source_url") or settings.DEFAULTS["source_url"]
     settings.save(to_save)
@@ -1233,6 +1423,7 @@ async def settings_save(request: Request):
 
 
 # ---------- clients ----------
+
 
 @app.get("/clients", response_class=HTMLResponse)
 def clients_page(request: Request):
@@ -1280,8 +1471,11 @@ def clients_sync(request: Request):
                 added += 1
     finally:
         conn.close()
-    flash(request, f"Synced {len(companies)} Hudu companies: {added} added, {renamed} renamed. "
-                   "Check the label names of new clients.")
+    flash(
+        request,
+        f"Synced {len(companies)} Hudu companies: {added} added, {renamed} renamed. "
+        "Check the label names of new clients.",
+    )
     return go("/clients")
 
 
@@ -1311,8 +1505,10 @@ def client_update(request: Request, cid: int, label_name: str = Form(...), activ
         return go("/clients")
     conn = db.connect()
     try:
-        conn.execute("UPDATE clients SET label_name=?, active=?, updated_at=? WHERE id=?",
-                     (label, 1 if active else 0, db.now(), cid))
+        conn.execute(
+            "UPDATE clients SET label_name=?, active=?, updated_at=? WHERE id=?",
+            (label, 1 if active else 0, db.now(), cid),
+        )
     finally:
         conn.close()
     flash(request, "Client saved. Tags already printed with the old name are listed as needing a reprint.")
@@ -1320,6 +1516,7 @@ def client_update(request: Request, cid: int, label_name: str = Form(...), activ
 
 
 # ---------- users ----------
+
 
 @app.get("/users", response_class=HTMLResponse)
 def users_page(request: Request):
@@ -1333,8 +1530,13 @@ def users_page(request: Request):
 
 
 @app.post("/users/new")
-def user_new(request: Request, username: str = Form(...), email: str = Form(""), role: str = Form("user"),
-             password: str = Form("")):
+def user_new(
+    request: Request,
+    username: str = Form(...),
+    email: str = Form(""),
+    role: str = Form("user"),
+    password: str = Form(""),
+):
     auth.require_admin(request)
     username = clean(username, 80)
     if role not in ("user", "admin") or not username:
@@ -1460,6 +1662,7 @@ def account_password(request: Request, current: str = Form(""), new: str = Form(
 
 # ---------- Hudu lookup ----------
 
+
 @app.get("/api/hudu/assets")
 def hudu_assets(request: Request, client_id: int, q: str = ""):
     auth.require_user(request)
@@ -1478,12 +1681,14 @@ def hudu_assets(request: Request, client_id: int, q: str = ""):
 
 # ---------- scan landing (must stay last) ----------
 
+
 @app.get("/{raw}", response_class=HTMLResponse)
 def scan(request: Request, raw: str):
     code = codes.parse(raw)
     if not code:
-        return page(request, "message.html", status_code=404, heading="Page not found",
-                    body="Check the address and try again.")
+        return page(
+            request, "message.html", status_code=404, heading="Page not found", body="Check the address and try again."
+        )
     user = getattr(request.state, "user", None)
     if not user:
         ip = request.client.host if request.client else "?"
@@ -1492,8 +1697,13 @@ def scan(request: Request, raw: str):
         while hits and hits[0] < now_t - SCAN_WINDOW:
             hits.popleft()
         if len(hits) >= SCAN_MAX:
-            return page(request, "message.html", status_code=429, heading="Too many lookups",
-                        body="Please wait a minute and try again.")
+            return page(
+                request,
+                "message.html",
+                status_code=429,
+                heading="Too many lookups",
+                body="Please wait a minute and try again.",
+            )
         hits.append(now_t)
     conn = db.connect()
     try:
@@ -1503,7 +1713,15 @@ def scan(request: Request, raw: str):
     if user:
         return go(f"/tags/{code}")
     org = settings.get_all()
-    return page(request, "public.html", status_code=200 if tag else 404, tag=tag, code=code,
-                support_phone=org["support_phone"], support_tel=tel_link(org["support_phone"]),
-                support_email=org["support_email"], org=org,
-                owner=(label_name(tag, org) if tag and tag["format"] != "loan" else None))
+    return page(
+        request,
+        "public.html",
+        status_code=200 if tag else 404,
+        tag=tag,
+        code=code,
+        support_phone=org["support_phone"],
+        support_tel=tel_link(org["support_phone"]),
+        support_email=org["support_email"],
+        org=org,
+        owner=(label_name(tag, org) if tag and tag["format"] != "loan" else None),
+    )

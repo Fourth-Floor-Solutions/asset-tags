@@ -4,13 +4,13 @@ Same model as Script Scheduler: roles are `admin` (clients, users) and `user`
 (tag devices, print). SSO matches an existing user by email; unknown emails are
 refused unless their domain is listed in Settings (auto-enrol domains).
 """
+
 from __future__ import annotations
 
 import hashlib
 import hmac
 import os
 import secrets
-from typing import Optional
 
 from fastapi import Request
 
@@ -36,7 +36,7 @@ def hash_password(password: str) -> str:
     return f"pbkdf2_sha256${ITERATIONS}${salt}${digest}"
 
 
-def verify_password(password: str, stored: Optional[str]) -> bool:
+def verify_password(password: str, stored: str | None) -> bool:
     if not stored:
         return False
     try:
@@ -102,7 +102,7 @@ def sso_config():
     secret = settings.secret("entra_client_secret")
     tenant, client = s["entra_tenant_id"].strip(), s["entra_client_id"].strip()
     if tenant.lower() in MULTI_TENANT:
-        return None                       # refuse: would let other organisations' accounts in
+        return None  # refuse: would let other organisations' accounts in
     return (tenant, client, secret) if tenant and client and secret else None
 
 

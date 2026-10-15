@@ -10,6 +10,7 @@ from tests.test_app import login
 
 def _admin():
     from app import main
+
     main._login_fails.clear()
     c = TestClient(app)
     login(c)
@@ -28,6 +29,7 @@ def test_encrypt_roundtrip_and_key_file(monkeypatch):
 def test_wrong_key_is_reported_not_silent(monkeypatch):
     settings.save_secret("hudu_api_key", "abc123")
     from cryptography.fernet import Fernet
+
     monkeypatch.setenv("TAGDESK_SECRET_KEY", Fernet.generate_key().decode())
     info = settings.secret_info("hudu_api_key")
     assert info["status"] == "unreadable" and "Enter it again" in info["error"]
@@ -54,9 +56,9 @@ def test_secrets_write_only_and_kept_when_empty():
     assert settings.secret("hudu_api_key") == "secret-one" and hudu.configured()
     page = c.get("/settings").text
     assert "secret-one" not in page and "saved, encrypted" in page
-    c.post("/settings", data=dict(base, hudu_api_key=""))                 # empty keeps it
+    c.post("/settings", data=dict(base, hudu_api_key=""))  # empty keeps it
     assert settings.secret("hudu_api_key") == "secret-one"
-    c.post("/settings", data=dict(base, clear_hudu_api_key="1"))         # explicit remove
+    c.post("/settings", data=dict(base, clear_hudu_api_key="1"))  # explicit remove
     assert settings.secret("hudu_api_key") is None
     rows = [dict(r) for r in settings.recent_audit(50)]
     assert any(r["setting"] == "hudu_api_key" and r["change"] == "changed" for r in rows)
@@ -68,12 +70,14 @@ def test_sso_from_settings_rebuilds_without_restart():
     c = _admin()
     base = {"org_name": "Test Org", "org_mark": "TO", "accent": "#5b8def"}
     guid = "11111111-2222-3333-4444-555555555555"
-    c.post("/settings", data=dict(base, entra_tenant_id="example.onmicrosoft.com", entra_client_id=guid,
-                                  entra_client_secret="s3cret"))
+    c.post(
+        "/settings",
+        data=dict(base, entra_tenant_id="example.onmicrosoft.com", entra_client_id=guid, entra_client_secret="s3cret"),
+    )
     assert auth.sso_enabled() and auth.oauth() is not None
     first = auth.oauth()
     c.post("/settings", data=dict(base, entra_client_secret="s3cret-2"))
-    assert auth.oauth() is not first                                      # rebuilt after the change
+    assert auth.oauth() is not first  # rebuilt after the change
     assert c.post("/settings", data=dict(base, entra_client_id="not-a-guid")).status_code == 400
     c.post("/settings", data=dict(base, entra_tenant_id="", entra_client_id="", clear_entra_client_secret="1"))
     assert not auth.sso_enabled()
@@ -88,6 +92,7 @@ def test_missing_fields_keep_their_values():
 
 def test_secret_expiry_warning():
     from datetime import date, timedelta
+
     c = _admin()
     settings.save({"entra_secret_expires": (date.today() + timedelta(days=10)).isoformat()})
     assert "expires in 10 days" in c.get("/").text

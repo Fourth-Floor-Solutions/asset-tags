@@ -5,20 +5,19 @@
 - Print: Brother raster commands sent raw to TCP 9100, per the
   "Raster Command Reference PT-P900/P900W/P950NW/P910BT" v1.02.
 """
+
 from __future__ import annotations
 
-import os
 import socket
 import threading
 import time
-from typing import Optional
 
 from . import labels
 
 PORT = 9100
 HEAD_PINS = 560
-LINE_BYTES = HEAD_PINS // 8          # 70 bytes per raster line
-FEED_DOTS = 14                       # 1 mm leading/trailing margin, the minimum
+LINE_BYTES = HEAD_PINS // 8  # 70 bytes per raster line
+FEED_DOTS = 14  # 1 mm leading/trailing margin, the minimum
 
 # TZe tape width (mm) -> (pins for left margin, print area pins, width offset in dots).
 # From the raster reference, sections 2.3.2 and 2.3.5.
@@ -31,13 +30,33 @@ TAPES = {
     24: (112, 320, 10),
     36: (45, 454, 29),
 }
-TAPE_COLOURS = {0x01: "white", 0x03: "clear", 0x04: "red", 0x05: "blue", 0x06: "yellow",
-                0x07: "green", 0x08: "black", 0x31: "red", 0x41: "yellow"}
-ERRORS_1 = {0x01: "No tape loaded", 0x02: "End of tape", 0x04: "Cutter jam", 0x08: "Weak batteries",
-            0x40: "High-voltage adapter"}
-ERRORS_2 = {0x01: "Wrong tape for this job", 0x02: "Expansion buffer full", 0x04: "Communication error",
-            0x08: "Communication buffer full", 0x10: "Cover open", 0x20: "Overheating",
-            0x80: "System error"}
+TAPE_COLOURS = {
+    0x01: "white",
+    0x03: "clear",
+    0x04: "red",
+    0x05: "blue",
+    0x06: "yellow",
+    0x07: "green",
+    0x08: "black",
+    0x31: "red",
+    0x41: "yellow",
+}
+ERRORS_1 = {
+    0x01: "No tape loaded",
+    0x02: "End of tape",
+    0x04: "Cutter jam",
+    0x08: "Weak batteries",
+    0x40: "High-voltage adapter",
+}
+ERRORS_2 = {
+    0x01: "Wrong tape for this job",
+    0x02: "Expansion buffer full",
+    0x04: "Communication error",
+    0x08: "Communication buffer full",
+    0x10: "Cover open",
+    0x20: "Overheating",
+    0x80: "System error",
+}
 
 _locks: dict = {}
 _locks_guard = threading.Lock()
@@ -55,7 +74,7 @@ class PrinterError(Exception):
 _HOST_RE = __import__("re").compile(r"^(?=.{1,253}$)[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$")
 
 
-def clean_host(raw: str) -> Optional[str]:
+def clean_host(raw: str) -> str | None:
     """Normalise what an admin typed ("http://192.168.1.50/" -> "192.168.1.50").
 
     Returns "" for blank, None if it isn't a plain IP address or host name.
@@ -63,7 +82,7 @@ def clean_host(raw: str) -> Optional[str]:
     s = (raw or "").strip()
     for prefix in ("http://", "https://"):
         if s.lower().startswith(prefix):
-            s = s[len(prefix):]
+            s = s[len(prefix) :]
     s = s.split("/")[0].strip()
     if not s:
         return ""
@@ -105,16 +124,16 @@ def _read_tlv(buf: bytes, i: int):
     i += 2
     if n & 0x80:
         k = n & 0x7F
-        n = int.from_bytes(buf[i:i + k], "big")
+        n = int.from_bytes(buf[i : i + k], "big")
         i += k
-    return tag, buf[i:i + n], i + n
+    return tag, buf[i : i + n], i + n
 
 
 def _snmp_get(host: str, oid: str, community: str = "public", timeout: float = 3.0) -> bytes:
     req_id = int(time.time() * 1000) & 0x7FFFFFFF
     varbind = _tlv(0x30, _oid(oid) + b"\x05\x00")
     pdu = _tlv(0xA0, _tlv(0x02, req_id.to_bytes(4, "big")) + b"\x02\x01\x00\x02\x01\x00" + _tlv(0x30, varbind))
-    msg = _tlv(0x30, b"\x02\x01\x01" + _tlv(0x04, community.encode()) + pdu)   # SNMP v2c
+    msg = _tlv(0x30, b"\x02\x01\x01" + _tlv(0x04, community.encode()) + pdu)  # SNMP v2c
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.settimeout(timeout)
     try:
@@ -148,7 +167,9 @@ def status(host: str) -> dict:
         raise PrinterError("The printer's status reply wasn't a Brother status block.")
     errors = [m for bit, m in ERRORS_1.items() if raw[8] & bit] + [m for bit, m in ERRORS_2.items() if raw[9] & bit]
     return {
-        "model": {0x70: "PT-P950NW", 0x71: "PT-P900", 0x69: "PT-P900W", 0x78: "PT-P910BT"}.get(raw[4], f"model {raw[4]:#x}"),
+        "model": {0x70: "PT-P950NW", 0x71: "PT-P900", 0x69: "PT-P900W", 0x78: "PT-P910BT"}.get(
+            raw[4], f"model {raw[4]:#x}"
+        ),
         "errors": errors,
         "tape_mm": raw[10],
         "tape_colour": TAPE_COLOURS.get(raw[24], "other"),
@@ -159,10 +180,10 @@ def status(host: str) -> dict:
 
 
 COUNTERS_OID = "1.3.6.1.4.1.2435.2.3.9.4.2.1.5.5.10.0"
-TOTAL_LENGTH_ID = 0x60          # "Total Print Length (cm)" on the printer's maintenance page
+TOTAL_LENGTH_ID = 0x60  # "Total Print Length (cm)" on the printer's maintenance page
 
 
-def counter_cm(host: str) -> Optional[int]:
+def counter_cm(host: str) -> int | None:
     """Lifetime tape printed, in cm, from the printer's maintenance counters.
 
     The SNMP value is a list of records: id (1 byte), flag (1), length (1),
@@ -175,14 +196,14 @@ def counter_cm(host: str) -> Optional[int]:
     i = 0
     while i + 3 <= len(raw) and raw[i] != 0xFF:
         rid, size = raw[i], raw[i + 2]
-        value = int.from_bytes(raw[i + 3:i + 3 + size], "big")
+        value = int.from_bytes(raw[i + 3 : i + 3 + size], "big")
         if rid == TOTAL_LENGTH_ID:
             return value
         i += 3 + size
     return None
 
 
-def check_tape(st: dict, fmt: str) -> Optional[str]:
+def check_tape(st: dict, fmt: str) -> str | None:
     """Why this format can't print on the loaded tape, or None if it can."""
     spec = labels.FORMATS[fmt]
     if st["errors"]:
@@ -190,14 +211,17 @@ def check_tape(st: dict, fmt: str) -> Optional[str]:
     if not st["tape_mm"]:
         return "There's no tape in the printer."
     if st["tape_mm"] != spec["tape_mm"]:
-        return (f"{spec['name']} tags need {spec['tape_mm']} mm tape ({spec['tape']}); "
-                f"the printer has {st['tape_mm']} mm loaded.")
+        return (
+            f"{spec['name']} tags need {spec['tape_mm']} mm tape ({spec['tape']}); "
+            f"the printer has {st['tape_mm']} mm loaded."
+        )
     if spec["tape_colour"] != "any" and st["tape_colour"] != spec["tape_colour"]:
         return f"{spec['name']} tags need {spec['tape_colour']} tape; the printer has {st['tape_colour']} tape loaded."
     return None
 
 
 # ---------- raster encoding ----------
+
 
 def packbits(data: bytes) -> bytes:
     """TIFF PackBits, as the printer's compression mode 2 expects."""
@@ -206,7 +230,7 @@ def packbits(data: bytes) -> bytes:
         j = i
         while j + 1 < n and data[j + 1] == data[i] and j - i < 127:
             j += 1
-        if j > i:                                   # run of 2..128 identical bytes
+        if j > i:  # run of 2..128 identical bytes
             out += bytes([(257 - (j - i + 1)) & 0xFF, data[i]])
             i = j + 1
             continue
@@ -214,9 +238,9 @@ def packbits(data: bytes) -> bytes:
         while j + 1 < n and data[j + 1] != data[j] and j - i < 127:
             j += 1
         if j + 1 < n and data[j + 1] == data[j]:
-            j -= 1                                  # leave the start of the next run alone
+            j -= 1  # leave the start of the next run alone
         j = max(j, i)
-        out += bytes([j - i]) + data[i:j + 1]
+        out += bytes([j - i]) + data[i : j + 1]
         i = j + 1
     return bytes(out)
 
@@ -237,7 +261,7 @@ def raster_lines(image, tape_mm: int, nudge: int = 0) -> list:
     for x in reversed(range(w)):
         bits = bytearray(LINE_BYTES)
         for y in range(h):
-            if px[x, y] == 0:                       # black = ink
+            if px[x, y] == 0:  # black = ink
                 # `nudge` is a per-printer calibration in dots; negative moves
                 # the print down the label, positive moves it up.
                 pin = base + nudge + (h - 1 - y)
@@ -247,7 +271,7 @@ def raster_lines(image, tape_mm: int, nudge: int = 0) -> list:
     return lines
 
 
-MAX_PAGE_DOTS = round(950 / 25.4 * 360)      # keep each strip under the printer's 1000 mm page limit
+MAX_PAGE_DOTS = round(950 / 25.4 * 360)  # keep each strip under the printer's 1000 mm page limit
 
 
 def join_strip(images: list) -> list:
@@ -275,7 +299,7 @@ def join_strip(images: list) -> list:
         for n, img in enumerate(group):
             strip.paste(img, (x, 0))
             if n:
-                for y in range(0, h, 12):           # 6 dots on, 6 off, 2 dots wide
+                for y in range(0, h, 12):  # 6 dots on, 6 off, 2 dots wide
                     d.rectangle([x - 1, y, x, min(y + 5, h - 1)], fill=0)
             x += img.width
         out.append(strip)
@@ -292,21 +316,22 @@ def build_job(images: list, tape_mm: int, nudge: int = 0, strip: bool = False) -
     """
     if strip and len(images) > 1:
         images = join_strip(images)
-    out = bytearray(b"\x00" * 200 + b"\x1b@")                       # invalidate, initialise
+    out = bytearray(b"\x00" * 200 + b"\x1b@")  # invalidate, initialise
     for n, image in enumerate(images):
         lines = raster_lines(image, tape_mm, nudge)
-        page = 2 if n == len(images) - 1 else (0 if n == 0 else 1)   # single page counts as last
-        out += b"\x1bia\x01"                                          # raster mode
-        out += (b"\x1biz" + bytes([0x84, 0x00, tape_mm, 0x00]) + len(lines).to_bytes(4, "little")
-                + bytes([page, 0x00]))                                # print information
-        out += b"\x1biM\x40"                                          # auto cut
-        out += b"\x1biA\x01"                                          # cut after every page
+        page = 2 if n == len(images) - 1 else (0 if n == 0 else 1)  # single page counts as last
+        out += b"\x1bia\x01"  # raster mode
+        out += (
+            b"\x1biz" + bytes([0x84, 0x00, tape_mm, 0x00]) + len(lines).to_bytes(4, "little") + bytes([page, 0x00])
+        )  # print information
+        out += b"\x1biM\x40"  # auto cut
+        out += b"\x1biA\x01"  # cut after every page
         # No chain printing (bit 3): chain printing left the last label stuck
         # in the printer. Half cut (bit 2) is not used: on the PT-P950NW it
         # still cut right through, so strips are built as one long page instead.
         out += b"\x1biK\x08"
-        out += b"\x1bid" + FEED_DOTS.to_bytes(2, "little")            # 1 mm margins
-        out += b"M\x02"                                               # TIFF compression
+        out += b"\x1bid" + FEED_DOTS.to_bytes(2, "little")  # 1 mm margins
+        out += b"M\x02"  # TIFF compression
         for line in lines:
             if not any(line):
                 out += b"Z"
@@ -334,7 +359,7 @@ def send(host: str, job: bytes, timeout: float = 20.0) -> None:
             raise PrinterError(f"Couldn't send the job to the printer at {host}: {e}") from e
 
 
-def wait_done(host: str, timeout: float = 30.0) -> Optional[str]:
+def wait_done(host: str, timeout: float = 30.0) -> str | None:
     """Poll status until the printer is idle again; returns an error, or None."""
     deadline = time.time() + timeout
     time.sleep(1.5)
@@ -353,6 +378,7 @@ def wait_done(host: str, timeout: float = 30.0) -> Optional[str]:
 
 
 # ---------- printers saved in the app ----------
+
 
 def all_printers(conn) -> list:
     return conn.execute("SELECT * FROM printers ORDER BY is_default DESC, name COLLATE NOCASE, id").fetchall()
