@@ -26,6 +26,7 @@ First public release, under the AGPL-3.0.
 
 ### Changed
 - Renamed the project from Asset Tags to TagDesk.
+- Tag status reads **Assigned** / **Not assigned** (to a device) instead of "On device" / "Not on device", which read oddly next to **Not printed**; the summary box "Printed, not yet on a device" is now **Not assigned yet**.
 - When Microsoft sign-in is set up, the sign-in page shows only **Sign in with Microsoft**, with the local form behind **Use a local account**.
 - Button text switches between black and white to suit the accent colour.
 - The reverse proxy's address is a setting (`FORWARDED_ALLOW_IPS`), and so is the published port (`HOST_PORT`).

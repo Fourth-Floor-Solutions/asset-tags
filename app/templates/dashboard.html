@@ -6,8 +6,8 @@
   <div class="actions"><a class="btn primary" href="/tags/new">Tag a device</a><a class="btn" href="/tags/batch">Print a batch</a></div>
 </div>
 <div class="stats">
-  <a class="stat" href="/?status=active"><b>{{ counts.get('active', 0) }}</b><span>On devices</span></a>
-  <a class="stat" href="/?status=unassigned"><b>{{ counts.get('unassigned', 0) }}</b><span>Printed, not yet on a device</span></a>
+  <a class="stat" href="/?status=active"><b>{{ counts.get('active', 0) }}</b><span>Assigned to a device</span></a>
+  <a class="stat" href="/?status=unassigned"><b>{{ counts.get('unassigned', 0) }}</b><span>Not assigned yet</span></a>
   <a class="stat" href="/?status=retired"><b>{{ counts.get('retired', 0) }}</b><span>Retired</span></a>
   {% if reprint_count %}<a class="stat alert" href="#reprint"><b>{{ reprint_count }}</b><span>Need a new label</span></a>{% endif %}
 </div>
@@ -19,7 +19,7 @@
   </select>
   <select name="status" aria-label="Status">
     <option value="">Any status</option>
-    {% for s, label in [('active','On a device'),('unassigned','Not on a device'),('retired','Retired')] %}<option value="{{ s }}" {{ 'selected' if status == s }}>{{ label }}</option>{% endfor %}
+    {% for s, label in [('active','Assigned to a device'),('unassigned','Not assigned'),('retired','Retired')] %}<option value="{{ s }}" {{ 'selected' if status == s }}>{{ label }}</option>{% endfor %}
   </select>
   <button class="quiet" type="submit">Filter</button>
   {% if q or client_id or status %}<a class="btn quiet" href="/">Clear</a>{% endif %}
@@ -48,7 +48,7 @@
     <td>{{ t.model or '—' }}</td>
     <td class="mono small">{{ t.serial or '—' }}</td>
     <td><span class="pill tape" style="background: {{ tape_fill(t.format) }}">{{ formats[t.format].name }}</span></td>
-    <td class="nowrap"><span class="pill {{ t.status }}">{{ {'active':'On device','unassigned':'Not on device','retired':'Retired'}[t.status] }}</span>
+    <td class="nowrap"><span class="pill {{ t.status }}">{{ {'active':'Assigned','unassigned':'Not assigned','retired':'Retired'}[t.status] }}</span>
       {% if not t.printed_count and t.status != 'retired' %}<span class="pill reprint">Not printed</span>
       {% elif needs_reprint(t) %}<span class="pill reprint">Reprint</span>{% endif %}</td>
     <td class="small muted nowrap">{{ t.updated_at[:10] }}</td>

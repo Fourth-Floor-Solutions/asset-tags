@@ -404,3 +404,15 @@ def test_settings_page_title_is_plain():
     login(c)
     title = _re.search(r"<title>(.*?)</title>", c.get("/settings").text, _re.S).group(1)
     assert "<" not in title and title.startswith("Settings")
+
+
+def test_status_wording_is_about_assignment():
+    from app import main
+    main._login_fails.clear()
+    c = TestClient(app)
+    login(c)
+    cid = internal_client_id(c)
+    c.post("/tags/batch", data={"client_id": cid, "format": "standard", "count": "1"})
+    page = c.get("/").text
+    assert "Not assigned" in page and "Assigned to a device" in page
+    assert "On device" not in page and "Printed, not yet on a device" not in page

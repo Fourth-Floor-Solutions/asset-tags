@@ -19,13 +19,13 @@
 <div class="flash" id="print-result" role="status" hidden></div>
 {% if not tag.printed_count %}<div class="flash warn">This tag hasn't been printed yet.</div>
 {% elif reprint %}<div class="flash warn">The printed label no longer matches (client, label name or format changed). Print a replacement and swap it on the device.</div>{% endif %}
-{% if tag.status == 'retired' %}<div class="flash bad">Retired. This tag is no longer on a device in service.</div>{% endif %}
+{% if tag.status == 'retired' %}<div class="flash bad">Retired. This tag is no longer in use.</div>{% endif %}
 <div class="grid2">
   <div class="card">
     <div class="preview">{{ svg|safe }}</div>
     <p class="flash warn" id="fit-warn" hidden>The client's label name is too long for this tape, so it's squeezed. An admin can set a shorter label name on the Clients page.</p>
     <dl class="meta">
-      <dt>Status</dt><dd><span class="pill {{ tag.status }}">{{ {'active':'On a device','unassigned':'Not on a device yet','retired':'Retired'}[tag.status] }}</span></dd>
+      <dt>Status</dt><dd><span class="pill {{ tag.status }}">{{ {'active':'Assigned to a device','unassigned':'Not assigned to a device yet','retired':'Retired'}[tag.status] }}</span></dd>
       <dt>Tape</dt><dd>{{ formats[tag.format].tape }} · {{ formats[tag.format].width }}×{{ formats[tag.format].height }} mm</dd>
       <dt>QR opens</dt><dd class="mono small">{{ qr_url }}</dd>
       <dt>Printed</dt><dd>{% if tag.printed_count %}{{ tag.printed_count }}× · last {{ tag.printed_at[:16]|replace('T', ' ') }} UTC{% else %}Not yet{% endif %}</dd>
@@ -43,7 +43,7 @@
     </ul>
   </div>
   <div class="card">
-    <h2>{{ 'What is this tag on?' if tag.status == 'unassigned' else 'Device' }}</h2>
+    <h2>{{ 'Assign this tag to a device' if tag.status == 'unassigned' else 'Device' }}</h2>
     <form class="stack" method="post" action="/tags/{{ tag.code }}" data-format-guard>
       <div class="field"><label for="client_id">Client</label>{% set sel_client = tag.client_id %}{% include "_client_select.html" %}
         <span class="hint">Changing the client means printing a new label. The code and history stay the same.</span></div>
