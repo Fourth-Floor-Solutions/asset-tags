@@ -57,6 +57,49 @@ function initPicker() {
     }
   }
 
+  // Link the form to a Hudu asset; fill in only the fields that are still empty.
+  function link(a) {
+    idField.value = a.id;
+    urlField.value = a.url || "";
+    linked.dataset.name = a.name;
+    var set = function (id, v) { var el = document.getElementById(id); if (el && !el.value && v) el.value = v; };
+    set("device_name", a.name); set("model", a.model); set("serial", a.serial);
+    results.innerHTML = "";
+    if (suggest) suggest.hidden = true;
+    status.textContent = "Linked. Name, model and serial were filled in where empty.";
+    showLinked();
+  }
+
+  // Typing a serial number suggests the client's Hudu asset with that serial (never links on its own).
+  var serialField = document.getElementById("serial");
+  var suggest = document.getElementById("hudu-suggest");
+  var serialTimer, lastSerial = "";
+  function norm(s) { return (s || "").replace(/[\s-]/g, "").toUpperCase(); }
+  function suggestBySerial() {
+    var serial = serialField.value.trim();
+    if (!suggest || idField.value || !clientSel.value || norm(serial).length < 4 || serial === lastSerial) return;
+    lastSerial = serial;
+    fetch("/api/hudu/assets?client_id=" + encodeURIComponent(clientSel.value) + "&q=" + encodeURIComponent(serial), { credentials: "same-origin" })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.error || idField.value || serialField.value.trim() !== serial) return;
+        var matches = d.assets.filter(function (a) { return a.serial && norm(a.serial) === norm(serial); });
+        if (!matches.length) { suggest.hidden = true; return; }
+        var a = matches[0];
+        suggest.querySelector("[data-name]").textContent = a.name + (a.type ? " · " + a.type : "") + (matches.length > 1 ? " (and " + (matches.length - 1) + " more)" : "");
+        suggest.hidden = false;
+        suggest.querySelector("button").onclick = function () {
+          if (matches.length === 1) link(a);
+          else { q.value = serial; search(); suggest.hidden = true; }
+        };
+      })
+      .catch(function () {});
+  }
+  if (serialField && suggest) {
+    serialField.addEventListener("input", function () { clearTimeout(serialTimer); serialTimer = setTimeout(suggestBySerial, 600); });
+    serialField.addEventListener("change", suggestBySerial);
+  }
+
   function search() {
     var cid = clientSel.value;
     if (!cid) { status.textContent = "Choose a client first."; return; }
@@ -75,16 +118,7 @@ function initPicker() {
           var meta = document.createElement("small");
           meta.textContent = [a.model, a.serial].filter(Boolean).join(" · ");
           b.appendChild(name); b.appendChild(meta);
-          b.addEventListener("click", function () {
-            idField.value = a.id;
-            urlField.value = a.url || "";
-            linked.dataset.name = a.name;
-            var set = function (id, v) { var el = document.getElementById(id); if (el && !el.value && v) el.value = v; };
-            set("device_name", a.name); set("model", a.model); set("serial", a.serial);
-            results.innerHTML = "";
-            status.textContent = "Linked. Name, model and serial were filled in where empty.";
-            showLinked();
-          });
+          b.addEventListener("click", function () { link(a); });
           results.appendChild(b);
         });
       })

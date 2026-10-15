@@ -4,9 +4,10 @@ What changed in TagDesk, newest first. Everything that changed on the same
 day is listed under that one date, with any versions released that day in
 the heading. Versions follow [semantic versioning](https://semver.org).
 
-## 16 October 2026 · v0.2.0, v0.3.0, v0.4.0, v0.5.0
+## 16 October 2026 · v0.2.0, v0.3.0, v0.4.0, v0.5.0, v0.6.0
 
 ### Added
+- Typing a serial number on a tag suggests the client's Hudu asset with that serial (**Link it**), ignoring case, spaces and dashes. It never links on its own ([#38](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/38)).
 - **Reprint** list: every tag that needs a new label, either reported damaged, missing or faded on its page (**Label damaged or missing?**), or printed before its client, label name or format changed. **Print all** prints them together; printing a tag takes it off the list ([#36](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/36)).
 - **Export CSV** on the Tags list: every tag matching the current search and filters, with status, format, client, device, model, serial, Hudu link, print history and notes. Opens cleanly in Excel, and cells can't run as formulas ([#37](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/37)).
 - **Report a problem** on the public scan page: opens an email to your support address with the tag code, device, client and a link already filled in, plus **Call support** when a phone number is set. The button text and email subject are in Settings. Retired tags say the device is no longer managed ([#35](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/35)).
