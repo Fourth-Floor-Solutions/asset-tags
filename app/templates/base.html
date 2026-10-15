@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="{{ static('app.css') }}">
 {# After app.css, so the organisation's accent overrides the stylesheet's default. #}
 <style>:root { --accent: {{ org.accent }}; --accent-ink: {{ accent_ink }}; }</style>
+<script>document.documentElement.classList.add("js")</script>
 <script src="{{ static('app.js') }}" defer></script>
 {% block head %}{% endblock %}
 </head>
@@ -18,8 +19,9 @@
 <header class="top">
   <div class="top-in">
     <a class="brand" href="/"><span class="brand-mark">{{ org.org_mark }}</span> TagDesk</a>
+    <button type="button" class="menu-btn" aria-expanded="false" aria-controls="site-nav">Menu</button>
     {% set path = request.url.path %}
-    <nav class="nav">
+    <nav class="nav" id="site-nav" aria-label="Main">
       <a href="/" class="{{ 'on' if path == '/' }}">Tags</a>
       <a href="/tags/new" class="{{ 'on' if path == '/tags/new' }}">Tag a device</a>
       <a href="/tags/batch" class="{{ 'on' if path == '/tags/batch' }}">Print a batch</a>

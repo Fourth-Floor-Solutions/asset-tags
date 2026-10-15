@@ -5,11 +5,12 @@
   --fg: #16181c;
   --muted: #5b616b;
   --line: #d3d7dd;
+  --field: #868c95;   /* input borders: at least 3:1 against the surface (WCAG 1.4.11) */
   --chip: #e3e6ea;
   --accent: #5b8def;
   --accent-ink: #ffffff;
-  --ok: #2f7d4f;
-  --warn: #9a6a00;
+  --ok: #2a7048;      /* status colours: at least 4.5:1 on their -bg tints */
+  --warn: #8a5e00;
   --bad: #b3372b;
   --ok-bg: #e3f2e8;
   --warn-bg: #fbf1d4;
@@ -20,7 +21,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #15171b; --surface: #1e2126; --fg: #e9ebee; --muted: #9aa1ab; --line: #31353c; --chip: #2a2e35;
+    --bg: #15171b; --surface: #1e2126; --fg: #e9ebee; --muted: #9aa1ab; --line: #31353c; --field: #6a717c; --chip: #2a2e35;
     --ok: #6cc592; --warn: #e5b94c; --bad: #ef7b6f;
     --ok-bg: #1f3328; --warn-bg: #3a3020; --bad-bg: #3d2322;
     color-scheme: dark;
@@ -70,23 +71,26 @@ form.stack { display: grid; gap: 14px; }
 .field { display: grid; gap: 4px; min-width: 0; align-content: start; }
 .field > label, .lbl { font-size: 12px; color: var(--muted); font-family: var(--mono); letter-spacing: .05em; text-transform: uppercase; }
 input[type=text], input[type=password], input[type=email], input[type=number], input[type=search], input[type=url], input[type=date], select, textarea {
-  font: inherit; color: var(--fg); background: var(--surface); border: 1.5px solid var(--line); border-radius: 6px;
+  font: inherit; color: var(--fg); background: var(--surface); border: 1.5px solid var(--field); border-radius: 6px;
   padding: 8px 10px; width: 100%; min-width: 0;
 }
 /* One height for single-line inputs and selects (date inputs have their own default otherwise). */
 input[type=text], input[type=password], input[type=email], input[type=number], input[type=search], input[type=url], input[type=date], select { height: 42px; }
 textarea { min-height: 70px; resize: vertical; }
-input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+/* On the dark header and selection bar, the outline takes the text colour so it stays visible. */
+.top :focus-visible, .select-bar :focus-visible { outline-color: currentColor; }
 .hint { font-size: 12.5px; color: var(--muted); }
 .btn, button { font: 600 14px var(--body); padding: 8px 14px; border-radius: 6px; cursor: pointer; border: 1.5px solid var(--fg); background: transparent; color: var(--fg); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .btn.primary, button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .btn.danger, button.danger { border-color: var(--bad); color: var(--bad); }
 .btn.quiet, button.quiet { border-color: var(--line); }
+.btn.sm, button.sm { padding: 2px 8px; font-size: 12px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
 /* format picker */
 .formats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
-.formats label { border: 1.5px solid var(--line); border-radius: 8px; padding: 10px; display: grid; gap: 2px; cursor: pointer; }
+.formats label { border: 1.5px solid var(--field); border-radius: 8px; padding: 10px; display: grid; gap: 2px; cursor: pointer; }
 .formats label:has(input:checked) { border-color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); }
 .formats input { position: absolute; opacity: 0; pointer-events: none; }
 .formats b { font-family: var(--display); }
@@ -214,3 +218,22 @@ select.strip-opt { width: auto; padding: 6px 8px; font-size: 13px; }
 form.inline { display: inline; margin: 0; }
 button.linklike { all: unset; cursor: pointer; text-decoration: underline; color: inherit; font: inherit; }
 button.linklike:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+
+/* ---------- phones ---------- */
+.menu-btn { display: none; margin-left: auto; color: inherit; padding: 4px 12px;
+  border-color: color-mix(in srgb, currentColor 45%, transparent); }
+@media (max-width: 720px) {
+  /* With scripts on, the menu folds behind a Menu button; without, it's always shown. */
+  .js .menu-btn { display: inline-flex; }
+  .js .top:not(.open) .nav, .js .top:not(.open) .who { display: none; }
+  .nav { flex-basis: 100%; flex-direction: column; gap: 0; }
+  .nav a { padding: 9px 10px; border-bottom: 0; border-left: 3px solid transparent; }
+  .nav a.on { border-left-color: var(--accent); }
+  .who { flex-basis: 100%; padding: 8px 10px 4px; }
+  .top-in, main, .foot { padding-inline: 16px; }
+  main { padding-block: 18px 40px; gap: 18px; }
+  h1 { font-size: 22px; }
+  .head .actions { width: 100%; }
+  .filters input[type=search] { max-width: none; }
+  .history li { grid-template-columns: 1fr; gap: 2px; }
+}

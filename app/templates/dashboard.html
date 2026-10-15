@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as m with context %}
 {% block title %}Tags{% endblock %}
 {% block main %}
 <div class="head">
@@ -47,8 +48,8 @@
     <td>{{ t.device_name or '—' }}</td>
     <td>{{ t.model or '—' }}</td>
     <td class="mono small">{{ t.serial or '—' }}</td>
-    <td><span class="pill tape" style="background: {{ tape_fill(t.format) }}">{{ formats[t.format].name }}</span></td>
-    <td class="nowrap"><span class="pill {{ t.status }}">{{ {'active':'Assigned','unassigned':'Not assigned','retired':'Retired'}[t.status] }}</span>
+    <td>{{ m.tape_pill(t.format) }}</td>
+    <td class="nowrap">{{ m.status_pill(t.status) }}
       {% if not t.printed_count and t.status != 'retired' %}<span class="pill reprint">Not printed</span>
       {% elif needs_reprint(t) %}<span class="pill reprint">Reprint</span>{% endif %}</td>
     <td class="small muted nowrap">{{ t.updated_at[:10] }}</td>

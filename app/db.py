@@ -143,11 +143,13 @@ def init() -> None:
         conn,
         "printers",
         {
-            "chain": "INTEGER NOT NULL DEFAULT 0",  # unused: chain printing was removed (labels got stuck)
             "last_counter_cm": "INTEGER",  # printer's lifetime print length at last read
             "last_tape": "TEXT",  # tape loaded at last read, e.g. "18|yellow"
         },
     )
+    # Chain printing was removed (labels got stuck in the printer); drop its old setting.
+    if "chain" in {r["name"] for r in conn.execute("PRAGMA table_info(printers)")}:
+        conn.execute("ALTER TABLE printers DROP COLUMN chain")
     _add_columns(
         conn,
         "tags",

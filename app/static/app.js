@@ -1,3 +1,15 @@
+// Phones: the Menu button opens and closes the top navigation.
+function initMenu() {
+  var btn = document.querySelector(".menu-btn");
+  if (!btn) return;
+  var top = btn.closest(".top");
+  btn.addEventListener("click", function () {
+    var open = top.classList.toggle("open");
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+}
+document.addEventListener("DOMContentLoaded", initMenu);
+
 // Squeeze label text that's too long for its tape (client names).
 function fitLabels(root) {
   (root || document).querySelectorAll("svg text[data-maxw]").forEach(function (t) {

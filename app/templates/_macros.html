@@ -1,0 +1,8 @@
+{# Small pieces of markup used on several pages. Import with:
+   {% import "_macros.html" as m %} #}
+
+{# A tag format on its tape colour, e.g. "Standard" on yellow. #}
+{% macro tape_pill(fmt) %}<span class="pill tape" style="background: {{ tape_fill(fmt) }}">{{ formats[fmt].name }}</span>{% endmacro %}
+
+{# A tag's status. long=true for the tag's own page. #}
+{% macro status_pill(status, long=false) %}{% if long %}{% set words = {'active': 'Assigned to a device', 'unassigned': 'Not assigned to a device yet', 'retired': 'Retired'} %}{% else %}{% set words = {'active': 'Assigned', 'unassigned': 'Not assigned', 'retired': 'Retired'} %}{% endif %}<span class="pill {{ status }}">{{ words[status] }}</span>{% endmacro %}

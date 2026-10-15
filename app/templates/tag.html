@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as m with context %}
 {% block title %}{{ tag.code }}{% endblock %}
 {% block main %}
 <div class="head">
@@ -25,7 +26,7 @@
     <div class="preview">{{ svg|safe }}</div>
     <p class="flash warn" id="fit-warn" hidden>The client's label name is too long for this tape, so it's squeezed. An admin can set a shorter label name on the Clients page.</p>
     <dl class="meta">
-      <dt>Status</dt><dd><span class="pill {{ tag.status }}">{{ {'active':'Assigned to a device','unassigned':'Not assigned to a device yet','retired':'Retired'}[tag.status] }}</span></dd>
+      <dt>Status</dt><dd>{{ m.status_pill(tag.status, long=true) }}</dd>
       <dt>Tape</dt><dd>{{ formats[tag.format].tape }} · {{ formats[tag.format].width }}×{{ formats[tag.format].height }} mm</dd>
       <dt>QR opens</dt><dd class="mono small">{{ qr_url }}</dd>
       <dt>Printed</dt><dd>{% if tag.printed_count %}{{ tag.printed_count }}× · last {{ tag.printed_at[:16]|replace('T', ' ') }} UTC{% else %}Not yet{% endif %}</dd>
@@ -33,7 +34,7 @@
       <dt>Hudu field</dt><dd>{% set hs = tag.hudu_sync_status or 'not written yet' %}
         <span class="pill {{ 'active' if hs.startswith(('written','cleared','already')) else ('reprint' if hs.startswith('error') else 'unassigned') }}">{{ hudu_field }}</span>
         {{ hs }}{% if tag.hudu_sync_at %} <span class="muted small">· {{ tag.hudu_sync_at[:16]|replace('T', ' ') }} UTC</span>{% endif %}
-        <form method="post" action="/tags/{{ tag.code }}/hudu" style="display:inline"><button class="quiet" type="submit" style="padding:2px 8px;font-size:12px">Write to Hudu</button></form></dd>
+        <form method="post" action="/tags/{{ tag.code }}/hudu" class="inline"><button class="quiet sm" type="submit">Write to Hudu</button></form></dd>
       {% endif %}
       <dt>Issued</dt><dd>{{ tag.created_at[:10] }} by {{ tag.created_by }}</dd>
     </dl>
