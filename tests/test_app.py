@@ -78,9 +78,6 @@ def test_login_rate_limit():
     for _ in range(10):
         assert c.post("/login", data={"username": "admin", "password": "wrong", "next": "/"}).status_code == 401
     assert c.post("/login", data={"username": "admin", "password": "wrong", "next": "/"}).status_code == 429
-    from app import main
-
-    main._login_fails.clear()
 
 
 def test_hudu_sync(monkeypatch):
@@ -140,11 +137,8 @@ def test_hudu_sync(monkeypatch):
 
 
 def test_login_by_email(conn):
-    from app import main
-
     conn.execute("UPDATE users SET email = 'admin@example.test' WHERE username = 'admin'")
     conn.close()
-    main._login_fails.clear()
     c = TestClient(app)
     r = c.post(
         "/login",
@@ -204,9 +198,8 @@ def test_nudge_moves_print():
 
 
 def test_print_buttons(monkeypatch):
-    from app import main, printer
+    from app import printer
 
-    main._login_fails.clear()
     c = TestClient(app)
     login(c)
     monkeypatch.setattr(printer, "status", lambda host: (_ for _ in ()).throw(printer.PrinterError("offline")))
@@ -219,12 +212,11 @@ def test_print_buttons(monkeypatch):
 
 
 def test_printers_and_routing(monkeypatch):
-    from app import main, printer
+    from app import printer
 
     assert printer.clean_host("http://192.168.1.50/") == "192.168.1.50"
     assert printer.clean_host("printer.office.lan") == "printer.office.lan"
     assert printer.clean_host("bad host; rm -rf") is None
-    main._login_fails.clear()
     c = TestClient(app)
     login(c)
     tapes = {"10.0.0.1": (12, "yellow"), "10.0.0.2": (18, "yellow")}
@@ -272,9 +264,6 @@ def test_static_urls_are_versioned():
 
 
 def test_display_name():
-    from app import main
-
-    main._login_fails.clear()
     c = TestClient(app)
     login(c)
     c.post("/account/name", data={"name": "Sam Taylor"})
@@ -286,7 +275,7 @@ def test_display_name():
 
 
 def test_tel_link():
-    from app.main import tel_link
+    from app.web import tel_link
 
     assert tel_link("+44 (0)20 7946 0000") == "+442079460000"
     assert tel_link("020 7946 0000") == "02079460000"
@@ -335,11 +324,10 @@ def test_cassette_usage(monkeypatch, conn):
 
 
 def test_setup_and_settings(conn):
-    from app import main, settings
+    from app import settings
 
     conn.execute("DELETE FROM settings WHERE key = 'setup_done'")
     conn.close()
-    main._login_fails.clear()
     c = TestClient(app)
     c.post("/login", data={"username": "admin", "password": "test-password-123", "next": "/"})
     assert c.get("/", follow_redirects=False).headers["location"] == "/setup"  # first admin -> setup
@@ -387,9 +375,8 @@ def test_login_page_sso_only(monkeypatch):
 
 
 def test_label_formats_settings():
-    from app import labels, main, printer, settings
+    from app import labels, printer, settings
 
-    main._login_fails.clear()
     c = TestClient(app)
     login(c)
     data = {
@@ -476,9 +463,8 @@ def test_version_in_footer_and_endpoint(monkeypatch):
 
 
 def test_batch_cut_choice_carries_to_print_page(monkeypatch):
-    from app import main, printer
+    from app import printer
 
-    main._login_fails.clear()
     c = TestClient(app)
     login(c)
     monkeypatch.setattr(printer, "status", lambda host: (_ for _ in ()).throw(printer.PrinterError("offline")))
@@ -506,9 +492,6 @@ def test_login_page_tag_streams_and_no_version():
 
 
 def test_static_tag_background_only_when_signed_in():
-    from app import main
-
-    main._login_fails.clear()
     anon = TestClient(app).get("/ZZZZZ").text  # public scan page, signed out
     assert "tag-streams" not in anon
     c = TestClient(app)
@@ -520,9 +503,6 @@ def test_static_tag_background_only_when_signed_in():
 def test_settings_page_title_is_plain():
     import re as _re
 
-    from app import main
-
-    main._login_fails.clear()
     c = TestClient(app)
     login(c)
     title = _re.search(r"<title>(.*?)</title>", c.get("/settings").text, _re.S).group(1)
@@ -530,9 +510,6 @@ def test_settings_page_title_is_plain():
 
 
 def test_status_wording_is_about_assignment():
-    from app import main
-
-    main._login_fails.clear()
     c = TestClient(app)
     login(c)
     cid = internal_client_id(c)

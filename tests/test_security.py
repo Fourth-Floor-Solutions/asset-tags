@@ -1,13 +1,14 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app import main, settings
-from app.main import app, safe_next
+from app import settings
+from app.main import app
+from app.routes import public
+from app.web import safe_next
 from tests.test_app import internal_client_id, login
 
 
 def _admin():
-    main._login_fails.clear()
     c = TestClient(app)
     login(c)
     return c
@@ -35,7 +36,6 @@ def test_safe_next_keeps_local_paths():
 
 def test_login_and_sso_redirects_are_safe():
     c = TestClient(app)
-    main._login_fails.clear()
     r = c.post(
         "/login",
         data={"username": "admin", "password": "test-password-123", "next": "/\\evil.example"},
@@ -105,11 +105,11 @@ def test_hudu_address_change_needs_key_again():
 
 
 def test_public_scan_limit():
-    main._scan_hits.clear()
+    public._scan_hits.clear()
     c = TestClient(app)
     codes = [c.get(f"/ZZZZ{x}").status_code for x in "0123456789ABCDEFGHJKMNPQRSTVWXYZ" * 2]
-    assert codes.count(404) == main.SCAN_MAX and codes[-1] == 429
-    main._scan_hits.clear()
+    assert codes.count(404) == public.SCAN_MAX and codes[-1] == 429
+    public._scan_hits.clear()
 
 
 def test_sign_out_is_post_only():

@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 import secrets
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 
 from . import codes
@@ -111,6 +113,16 @@ def connect() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+@contextmanager
+def connection() -> Iterator[sqlite3.Connection]:
+    """`with db.connection() as conn:`, closed afterwards. Autocommit, so each statement is saved as it runs."""
+    conn = connect()
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 def init() -> None:
