@@ -89,7 +89,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 /* A field and its Set button on one line, e.g. in a table row. */
 .inline-set { display: flex; gap: 8px; align-items: center; margin: 0; }
-.inline-set input { width: 180px; flex: none; }
+.inline-set input { width: 0; flex: 1 1 auto; min-width: 130px; }   /* share the row's spare width; never squeeze below 130px */
 .inline-set select { width: auto; }
 
 /* format picker */
