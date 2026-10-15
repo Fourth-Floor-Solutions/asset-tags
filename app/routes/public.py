@@ -7,9 +7,9 @@ from collections import defaultdict, deque
 from urllib.parse import quote
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 
-from .. import changelog, codes, db, settings, version
+from .. import changelog, codes, db, labels, settings, version
 from ..tagops import (
     label_name,
 )
@@ -44,6 +44,53 @@ def favicon_svg():
         f'font-weight="800" font-size="{size}" fill="#111">{mark}</text></svg>'
     )
     return Response(svg, media_type="image/svg+xml", headers={"Cache-Control": "public, max-age=300"})
+
+
+@router.get("/manifest.webmanifest")
+def manifest():
+    """Lets staff add TagDesk to a phone's home screen; it opens on Tag a site."""
+    org = settings.get_all()
+    return JSONResponse(
+        {
+            "name": f"TagDesk · {org['org_short']}",
+            "short_name": "TagDesk",
+            "start_url": "/tag-a-site",
+            "scope": "/",
+            "display": "standalone",
+            "background_color": "#15171b",
+            "theme_color": org["accent"],
+            "icons": [
+                {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"},
+                {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+            ],
+        },
+        media_type="application/manifest+json",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
+@router.get("/icon-{size}.png")
+def app_icon(size: int):
+    """Home-screen icon: the organisation's mark on its accent colour."""
+    import io
+    import os
+
+    from PIL import Image, ImageDraw, ImageFont
+
+    if size not in (180, 192, 512):
+        return PlainTextResponse("Not found", status_code=404)
+    org = settings.get_all()
+    accent = org["accent"] if len(org["accent"]) == 7 else "#5b8def"
+    img = Image.new("RGB", (size, size), accent)
+    mark = (org["org_mark"] or "TD")[:3]
+    font = ImageFont.truetype(
+        os.path.join(os.path.dirname(labels.__file__), "fonts", "JetBrainsMono-ExtraBold.ttf"),
+        int(size * (0.42 if len(mark) <= 2 else 0.3)),
+    )
+    ImageDraw.Draw(img).text((size / 2, size / 2), mark, font=font, fill=settings.ink_for(accent), anchor="mm")
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    return Response(buf.getvalue(), media_type="image/png", headers={"Cache-Control": "public, max-age=3600"})
 
 
 @router.get("/changelog", response_class=HTMLResponse)

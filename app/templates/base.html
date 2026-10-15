@@ -7,6 +7,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;800&display=swap">
 <link rel="icon" href="{{ favicon }}" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<meta name="theme-color" content="{{ org.accent }}">
 <link rel="stylesheet" href="{{ static('app.css') }}">
 {# After app.css, so the organisation's accent overrides the stylesheet's default. #}
 <style>:root { --accent: {{ org.accent }}; --accent-ink: {{ accent_ink }}; }</style>
@@ -24,6 +27,7 @@
     <nav class="nav" id="site-nav" aria-label="Main">
       <a href="/" class="{{ 'on' if path == '/' }}">Tags</a>
       <a href="/tags/new" class="{{ 'on' if path == '/tags/new' }}">Tag a device</a>
+      <a href="/tag-a-site" class="{{ 'on' if path == '/tag-a-site' }}">Tag a site</a>
       <a href="/tags/batch" class="{{ 'on' if path == '/tags/batch' }}">Print a batch</a>
       <a href="/clients" class="{{ 'on' if path.startswith('/clients') }}">Clients</a>
       {% if hudu_on %}<a href="/coverage" class="{{ 'on' if path.startswith('/coverage') }}">Coverage</a>{% endif %}
