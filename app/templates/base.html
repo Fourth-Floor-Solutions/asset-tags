@@ -35,6 +35,7 @@
 {% if bg_streams %}{% set streams = bg_streams %}{% set animated = false %}{% include "_tag_streams.html" %}{% endif %}
 <main>
   {% if flash %}<div class="flash {{ flash.kind }}" role="status">{{ flash.text }}</div>{% endif %}
+  {% if secret_warning %}<div class="flash warn" role="status">{{ secret_warning }} <a href="/settings#integrations">Settings</a></div>{% endif %}
   {% block main %}{% endblock %}
 </main>
 {% block footer %}

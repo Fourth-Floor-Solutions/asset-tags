@@ -1,12 +1,15 @@
-"""Organisation settings, edited by admins on the Settings page.
+"""Settings, edited by admins on the Settings page.
 
 Everything that makes the app "ours" lives here rather than in code: the
 organisation's name and mark, label wording, accent colour, support contact,
-Hudu options and SSO auto-enrol domains. Secrets (HUDU_API_KEY, the SSO client
-secret) stay in the environment.
+Hudu connection, Microsoft sign-in and the source-code link.
 
-A few settings fall back to an environment variable when they haven't been
-saved yet, so an existing .env keeps working.
+Two kinds of environment link:
+- ENV_FALLBACK: the environment variable is used until the setting is saved.
+- ENV_WINS: if the environment variable is set, it's used and the setting
+  can't be edited in the app (so existing .env-based installs keep working).
+
+Secrets (SECRET_KEYS) are stored encrypted (see secretbox) and never shown.
 """
 from __future__ import annotations
 
@@ -30,7 +33,21 @@ DEFAULTS = {
     "hudu_write": "0",
     "hudu_tag_field": "Asset Tag",
     "sso_auto_domains": "",
+    "entra_tenant_id": "",
+    "entra_client_id": "",
+    "entra_secret_expires": "",           # YYYY-MM-DD, for the expiry warning
+    "source_url": "https://github.com/Fourth-Floor-Solutions/tagdesk",
 }
+
+# Setting -> environment variable that, when set, overrides it.
+ENV_WINS = {
+    "entra_tenant_id": "ENTRA_TENANT_ID",
+    "entra_client_id": "ENTRA_CLIENT_ID",
+    "source_url": "SOURCE_URL",
+    "hudu_api_key": "HUDU_API_KEY",
+    "entra_client_secret": "ENTRA_CLIENT_SECRET",
+}
+SECRET_KEYS = ("hudu_api_key", "entra_client_secret")
 
 # Setting -> environment variable used until the setting is saved.
 ENV_FALLBACK = {
@@ -55,7 +72,9 @@ def get_all() -> dict:
         conn.close()
     out = {}
     for k, default in DEFAULTS.items():
-        if k in saved:
+        if k in ENV_WINS and os.environ.get(ENV_WINS[k], "").strip():
+            out[k] = os.environ[ENV_WINS[k]].strip()
+        elif k in saved:
             out[k] = saved[k]
         elif k in ENV_FALLBACK and os.environ.get(ENV_FALLBACK[k]):
             out[k] = os.environ[ENV_FALLBACK[k]].strip()
@@ -144,5 +163,75 @@ def save_formats(overrides: dict) -> None:
     conn = db.connect()
     try:
         db.set_setting(conn, "label_formats", json.dumps(overrides))
+    finally:
+        conn.close()
+
+
+def source(key: str) -> str:
+    """Where a setting's value comes from: "env", "saved" or "default"."""
+    if key in ENV_WINS and os.environ.get(ENV_WINS[key], "").strip():
+        return "env"
+    conn = db.connect()
+    try:
+        return "saved" if db.get_setting(conn, key) not in (None, "") else "default"
+    finally:
+        conn.close()
+
+
+# ---------- secrets ----------
+
+def secret_info(key: str) -> dict:
+    """{"status": env | set | unset | unreadable, "value": str or None, "error": str}."""
+    from . import secretbox
+
+    env = os.environ.get(ENV_WINS.get(key, ""), "").strip() if key in ENV_WINS else ""
+    if env:
+        return {"status": "env", "value": env, "error": ""}
+    conn = db.connect()
+    try:
+        stored = db.get_setting(conn, key)
+    finally:
+        conn.close()
+    if not stored:
+        return {"status": "unset", "value": None, "error": ""}
+    try:
+        return {"status": "set", "value": secretbox.decrypt(stored), "error": ""}
+    except secretbox.SecretUnreadable as e:
+        return {"status": "unreadable", "value": None, "error": str(e)}
+
+
+def secret(key: str):
+    return secret_info(key)["value"]
+
+
+def save_secret(key: str, value) -> None:
+    """Store a secret encrypted, or remove it when value is None or empty."""
+    from . import secretbox
+
+    conn = db.connect()
+    try:
+        if value:
+            db.set_setting(conn, key, secretbox.encrypt(value))
+        else:
+            conn.execute("DELETE FROM settings WHERE key = ?", (key,))
+    finally:
+        conn.close()
+
+
+# ---------- audit ----------
+
+def audit(actor: str, setting: str, change: str = "") -> None:
+    conn = db.connect()
+    try:
+        conn.execute("INSERT INTO audit(at, actor, setting, change) VALUES(?,?,?,?)",
+                     (db.now(), actor, setting, change[:300]))
+    finally:
+        conn.close()
+
+
+def recent_audit(limit: int = 15) -> list:
+    conn = db.connect()
+    try:
+        return conn.execute("SELECT * FROM audit ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
     finally:
         conn.close()

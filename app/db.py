@@ -77,6 +77,14 @@ CREATE TABLE IF NOT EXISTS cassettes (
   UNIQUE(printer_id, tape)
 );
 
+CREATE TABLE IF NOT EXISTS audit (
+  id INTEGER PRIMARY KEY,
+  at TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  setting TEXT NOT NULL,
+  change TEXT NOT NULL DEFAULT ''          -- never contains secret values
+);
+
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY,
   code TEXT NOT NULL,

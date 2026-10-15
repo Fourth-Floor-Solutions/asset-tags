@@ -68,7 +68,7 @@ form.stack { display: grid; gap: 14px; }
 .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 .field { display: grid; gap: 4px; min-width: 0; }
 .field > label, .lbl { font-size: 12px; color: var(--muted); font-family: var(--mono); letter-spacing: .05em; text-transform: uppercase; }
-input[type=text], input[type=password], input[type=email], input[type=number], input[type=search], select, textarea {
+input[type=text], input[type=password], input[type=email], input[type=number], input[type=search], input[type=url], input[type=date], select, textarea {
   font: inherit; color: var(--fg); background: var(--surface); border: 1.5px solid var(--line); border-radius: 6px;
   padding: 8px 10px; width: 100%; min-width: 0;
 }

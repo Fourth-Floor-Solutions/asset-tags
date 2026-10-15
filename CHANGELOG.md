@@ -21,6 +21,7 @@ First public release, under the AGPL-3.0.
 - Sign in with your email address as well as your username.
 - The device name on the public scan page.
 - Version number and build in the footer, and at `/version`.
+- Set the Hudu API key, Microsoft sign-in (tenant, client ID, client secret and its expiry) and the source-code link in Settings, with **Test** buttons, changes applied without a restart, a warning before the client secret expires, and a log of setting changes. Values in `.env` still work and take priority ([#7](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/7)).
 - This changelog, grouped by date, and a What's new page linked from the footer ([#13](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/13)).
 
 ### Changed
@@ -41,6 +42,7 @@ First public release, under the AGPL-3.0.
 
 ### Security
 - Failed sign-ins are limited per IP address, and only the reverse proxy may pass on the visitor's IP.
+- Secrets saved in Settings are encrypted, with the key kept outside the database, and are never shown again.
 
 ## 30 September 2026
 

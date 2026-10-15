@@ -71,16 +71,31 @@ Two places:
 | `FORWARDED_ALLOW_IPS` | Your reverse proxy's IP address. Only this address may pass on the visitor's real IP, which the sign-in rate limit relies on. |
 | `HOST_PORT` | Port the container is published on (default 8080). |
 | `ADMIN_PASSWORD`, `ADMIN_EMAIL` | The first admin account, created on first start. |
-| `HUDU_API_KEY` | Optional, see [Hudu](#hudu-optional). |
-| `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET` | Optional, see [Microsoft sign-in](#microsoft-sign-in-optional). |
-| `SOURCE_URL` | Where users can get the source (see [Licence](#licence)). |
+| `TAGDESK_SECRET_KEY` | Optional. The key that encrypts secrets saved in Settings. If unset, one is created in `data/secret.key`. |
 | `COOKIE_INSECURE=1` | Local development over plain http only. |
 
-**Settings page (admins):** everything about your organisation. That covers
-the name, short name and mark, accent colour, support phone and email, the
-wording on labels, your own client (used for loan tags), the label formats and
-tapes you use, the Hudu address and options, and which email domains get an
-account on first Microsoft sign-in.
+**Settings page (admins):** everything else:
+- your organisation's name, short name, mark and accent colour
+- support phone and email
+- the wording on labels, your own client (used for loan tags), and the label formats and tapes you use
+- the **Hudu** address and API key
+- **Microsoft sign-in** (tenant ID, client ID, client secret and its expiry date) and which email domains get an account on first sign-in
+- the source-code link
+
+Changes take effect straight away, without a restart. Settings has **Test**
+buttons for Hudu and Microsoft sign-in, and keeps a log of who changed what.
+
+**Secrets** (the Hudu API key and the Microsoft client secret) are stored
+encrypted, with the key kept outside the database (`data/secret.key`, or
+`TAGDESK_SECRET_KEY`), and are never shown again after saving. A copy of the
+database on its own doesn't reveal them. **Back up `data/secret.key` with the
+database**; without it, saved secrets have to be entered again.
+
+**Upgrading from an older version:** `HUDU_API_KEY`, `ENTRA_TENANT_ID`,
+`ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET` and `SOURCE_URL` still work in
+`.env`, and take priority over Settings (the fields show as set in `.env`).
+To move a secret into the app, use **Copy into Settings**, then remove the
+variable from `.env` and restart.
 
 ## Reverse proxy
 
@@ -191,9 +206,9 @@ code small enough to scan reliably on 12 mm tape.
 
 ## Hudu (optional)
 
-1. In Hudu, create an API key with access to companies and assets. Put it in
-   `.env` as `HUDU_API_KEY` and restart.
-2. In Settings → Hudu, enter your Hudu address.
+1. In Hudu, create an API key with access to companies and assets.
+2. In Settings → Hudu, enter your Hudu address and the API key, save, and
+   press **Test Hudu connection**.
 3. On the Clients page, **Sync from Hudu** to import your companies.
 
 When tagging a device you can then search that client's Hudu assets by name or
@@ -239,8 +254,10 @@ az ad sp create --id "$APP"
 az ad app credential reset --id "$APP" --years 2 --query password -o tsv   # the client secret
 ```
 
-Put the tenant ID, the app's client ID and the secret in `.env`, restart, and
-the sign-in page shows only **Sign in with Microsoft**. The local login stays
+Enter the tenant ID, the app's client ID, the secret and its expiry date in
+Settings → Microsoft sign-in, and save. The sign-in page then shows only
+**Sign in with Microsoft**; no restart is needed. Admins are warned 30 days
+before the secret expires. The local login stays
 available behind *Use a local account*, so an admin can still get in if
 Microsoft sign-in breaks.
 
@@ -271,7 +288,8 @@ anything you wouldn't print on the label itself out of the device name.
 ## Data and backups
 
 Everything is in one SQLite file, `data/tagdesk.db`: tags, clients, users,
-printers, settings and history. Back up the `data/` directory. For a
+printers, settings and history. Saved secrets are encrypted with
+`data/secret.key`. Back up the whole `data/` directory. For a
 consistent copy while running:
 
 ```sh

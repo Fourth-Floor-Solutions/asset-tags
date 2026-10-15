@@ -86,29 +86,48 @@ def require_admin(request: Request):
     return user
 
 
+def sso_config():
+    """(tenant id, client id, client secret) from Settings or .env; None if incomplete or unreadable."""
+    from . import settings
+
+    s = settings.get_all()
+    secret = settings.secret("entra_client_secret")
+    tenant, client = s["entra_tenant_id"].strip(), s["entra_client_id"].strip()
+    return (tenant, client, secret) if tenant and client and secret else None
+
+
 def sso_enabled() -> bool:
-    return all(os.environ.get(k) for k in ("ENTRA_TENANT_ID", "ENTRA_CLIENT_ID", "ENTRA_CLIENT_SECRET"))
+    return sso_config() is not None
 
 
 _oauth = None
+_oauth_for = None
+
+
+def metadata_url(tenant: str) -> str:
+    return f"https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration"
 
 
 def oauth():
-    global _oauth
-    if _oauth is None and sso_enabled():
+    """The Microsoft OAuth client, rebuilt whenever the sign-in settings change."""
+    global _oauth, _oauth_for
+    cfg = sso_config()
+    if cfg is None:
+        _oauth = _oauth_for = None
+        return None
+    if _oauth is None or _oauth_for != cfg:
         from authlib.integrations.starlette_client import OAuth
 
-        _oauth = OAuth()
-        _oauth.register(
+        tenant, client_id, secret = cfg
+        client = OAuth()
+        client.register(
             "entra",
-            client_id=os.environ["ENTRA_CLIENT_ID"],
-            client_secret=os.environ["ENTRA_CLIENT_SECRET"],
-            server_metadata_url=(
-                f"https://login.microsoftonline.com/{os.environ['ENTRA_TENANT_ID']}"
-                "/v2.0/.well-known/openid-configuration"
-            ),
+            client_id=client_id,
+            client_secret=secret,
+            server_metadata_url=metadata_url(tenant),
             client_kwargs={"scope": "openid email profile"},
         )
+        _oauth, _oauth_for = client, cfg
     return _oauth
 
 

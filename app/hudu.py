@@ -21,8 +21,14 @@ class HuduError(Exception):
     pass
 
 
+def api_key():
+    from . import settings
+
+    return settings.secret("hudu_api_key")
+
+
 def configured() -> bool:
-    return bool(base_url() and os.environ.get("HUDU_API_KEY"))
+    return bool(base_url() and api_key())
 
 
 def base_url() -> str:
@@ -33,14 +39,14 @@ def base_url() -> str:
 
 def _request(method: str, path: str, params: Optional[dict] = None, body: Optional[dict] = None) -> object:
     if not configured():
-        raise HuduError("Hudu isn't set up. Add its address in Settings and HUDU_API_KEY to the server's .env.")
+        raise HuduError("Hudu isn't set up. Add its address and API key in Settings.")
     try:
         r = httpx.request(
             method,
             f"{base_url()}/api/v1{path}",
             params=params,
             json=body,
-            headers={"x-api-key": os.environ["HUDU_API_KEY"], "Accept": "application/json"},
+            headers={"x-api-key": api_key(), "Accept": "application/json"},
             timeout=TIMEOUT,
         )
     except httpx.HTTPError as e:

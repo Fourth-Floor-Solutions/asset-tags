@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import re
 import secrets
 import time
 from collections import defaultdict, deque
@@ -18,9 +19,6 @@ from . import auth, changelog, codes, db, hudu, labels, printer, settings, usage
 
 HERE = os.path.dirname(__file__)
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:8080").rstrip("/")
-# AGPL: people using the app over a network must be able to get its source.
-# If you run a modified version, point this at your own copy of the code.
-SOURCE_URL = os.environ.get("SOURCE_URL", "https://github.com/Fourth-Floor-Solutions/tagdesk")
 MAX_BATCH = 100
 MAX_PRINT = 200
 
@@ -134,7 +132,9 @@ def page(request: Request, name: str, status_code: int = 200, **ctx):
         enabled_formats=labels.enabled(),
         tape_fill=labels.fill,
         public_base=PUBLIC_BASE_URL,
-        source_url=SOURCE_URL,
+        # AGPL: users must be able to get the source; set your own link in Settings if you modify it.
+        source_url=org["source_url"].rstrip("/"),
+        secret_warning=_secret_warning(ctx.get("user") or getattr(request.state, "user", None)),
         version=version.VERSION,
         commit=version.COMMIT,
     )
@@ -942,6 +942,80 @@ def printer_test(request: Request, pid: int):
 
 # ---------- settings ----------
 
+GUID = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+TENANT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]{1,252}$")
+SECRET_WARN_DAYS = 30
+
+
+def _secret_warning(user) -> str:
+    """For admins: the Microsoft client secret expires soon (or has expired)."""
+    if not user or user["role"] != "admin":
+        return ""
+    from datetime import date
+
+    raw = settings.get("entra_secret_expires")
+    try:
+        expires = date.fromisoformat(raw)
+    except (TypeError, ValueError):
+        return ""
+    days = (expires - date.today()).days
+    if days < 0:
+        return f"The Microsoft sign-in client secret expired on {expires:%d %B %Y}. Create a new one in Entra and enter it in Settings."
+    if days <= SECRET_WARN_DAYS:
+        return f"The Microsoft sign-in client secret expires in {days} day{'s' if days != 1 else ''} ({expires:%d %B %Y}). Create a new one in Entra and enter it in Settings."
+    return ""
+
+
+@app.post("/settings/secrets/{key}/import")
+def secret_import(request: Request, key: str):
+    """Copy a secret that's currently set in .env into Settings (encrypted)."""
+    user = auth.require_admin(request)
+    if key not in settings.SECRET_KEYS:
+        return go("/settings")
+    info = settings.secret_info(key)
+    if info["status"] != "env":
+        flash(request, "That value isn't set in .env.", "bad")
+        return go("/settings")
+    settings.save_secret(key, info["value"])
+    settings.audit(auth.label(user), key, "copied from .env into Settings")
+    env_name = settings.ENV_WINS[key]
+    flash(request, f"Copied into Settings. Remove {env_name} from the server's .env and restart the app to manage it here; "
+                   f"until then the .env value is still used.")
+    return go("/settings#integrations")
+
+
+@app.post("/settings/test/hudu")
+def settings_test_hudu(request: Request):
+    auth.require_admin(request)
+    try:
+        n = len(hudu.list_companies())
+        flash(request, f"Hudu connection works: {n} compan{'y' if n == 1 else 'ies'} found.")
+    except hudu.HuduError as e:
+        flash(request, f"Hudu connection failed: {e}", "bad")
+    return go("/settings#integrations")
+
+
+@app.post("/settings/test/sso")
+def settings_test_sso(request: Request):
+    auth.require_admin(request)
+    cfg = auth.sso_config()
+    if cfg is None:
+        flash(request, "Microsoft sign-in isn't fully set up: it needs the tenant ID, client ID and client secret.", "bad")
+        return go("/settings#integrations")
+    import httpx
+
+    try:
+        r = httpx.get(auth.metadata_url(cfg[0]), timeout=10)
+        ok = r.status_code == 200 and "authorization_endpoint" in r.json()
+    except (httpx.HTTPError, ValueError):
+        ok = False
+    if ok:
+        flash(request, "Microsoft sign-in settings look right: the tenant was found. Sign out and use "
+                       "Sign in with Microsoft to check the client ID and secret.")
+    else:
+        flash(request, "Microsoft couldn't find that tenant. Check the tenant ID.", "bad")
+    return go("/settings#integrations")
+
 def _settings_page(request: Request, setup: bool, error: str = "", form: dict = None):
     conn = db.connect()
     try:
@@ -955,8 +1029,12 @@ def _settings_page(request: Request, setup: bool, error: str = "", form: dict = 
     return page(request, "settings.html", status_code=400 if error else 200, setup=setup, s=s, error=error,
                 tape_colours=list(labels.TAPE_FILLS),
                 clients=cl, preview=label_text(s) if not error else None,
-                env={"public_url": PUBLIC_BASE_URL, "hudu_key": bool(os.environ.get("HUDU_API_KEY")),
-                     "sso": auth.sso_enabled(), "printer_count": len(printers_live_rows())})
+                env={"public_url": PUBLIC_BASE_URL, "sso": auth.sso_enabled(),
+                     "printer_count": len(printers_live_rows())},
+                src={k: settings.source(k) for k in settings.ENV_WINS},
+                env_names=settings.ENV_WINS,
+                secrets={k: settings.secret_info(k) for k in settings.SECRET_KEYS},
+                audit=settings.recent_audit())
 
 
 def printers_live_rows() -> list:
@@ -983,11 +1061,14 @@ def settings_page(request: Request):
 
 @app.post("/settings")
 async def settings_save(request: Request):
-    auth.require_admin(request)
+    user = auth.require_admin(request)
     data = await request.form()
     setup = data.get("setup") == "1"
-    v = {k: clean(data.get(k, ""), 200) for k in settings.KEYS}
-    v["hudu_write"] = "1" if data.get("hudu_write") else "0"
+    before = settings.get_all()
+    # Fields not on the form keep their current value; values set in .env are never copied in.
+    v = {k: (clean(data.get(k, ""), 200) if k in data else before[k]) for k in settings.KEYS}
+    if "hudu_url" in data:
+        v["hudu_write"] = "1" if data.get("hudu_write") else "0"
     v["hudu_url"] = v["hudu_url"].rstrip("/")
     v["org_mark"] = v["org_mark"][:3]
     v["accent"] = v["accent"] or settings.DEFAULTS["accent"]
@@ -1002,6 +1083,14 @@ async def settings_save(request: Request):
         error = "The accent colour must be a hex colour like #5b8def."
     elif v["hudu_url"] and not v["hudu_url"].startswith(("https://", "http://")):
         error = "The Hudu address must start with https://"
+    elif v["entra_tenant_id"] and not TENANT.match(v["entra_tenant_id"]):
+        error = "The tenant ID should be a GUID or a domain like example.onmicrosoft.com."
+    elif v["entra_client_id"] and not GUID.match(v["entra_client_id"]):
+        error = "The client ID (application ID) should be a GUID like 00000000-0000-0000-0000-000000000000."
+    elif v["entra_secret_expires"] and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", v["entra_secret_expires"]):
+        error = "Enter the secret's expiry as a date."
+    elif v["source_url"] and not v["source_url"].startswith(("https://", "http://")):
+        error = "The source code link must start with https://"
     v["org_short"] = v["org_short"] or v["org_name"]
     # Format settings only change when the form included the format table.
     formats_shown = data.get("formats_shown") == "1"
@@ -1030,7 +1119,25 @@ async def settings_save(request: Request):
         v["internal_client_id"] = cid if cid.isdigit() else ""
     finally:
         conn.close()
-    settings.save(v)
+    env_set = {k for k in settings.ENV_WINS if settings.source(k) == "env"}
+    to_save = {k: val for k, val in v.items() if k not in env_set}
+    to_save["source_url"] = to_save.get("source_url") or settings.DEFAULTS["source_url"]
+    settings.save(to_save)
+    actor = auth.label(user)
+    for k, val in to_save.items():
+        if str(before.get(k, "")) != str(val):
+            settings.audit(actor, k, f"{str(before.get(k, ''))[:60]!r} → {str(val)[:60]!r}")
+    # Secrets: write-only. Empty keeps the current value; the clear box removes it.
+    for key in settings.SECRET_KEYS:
+        if key in env_set:
+            continue
+        new = (data.get(key) or "").strip()
+        if data.get(f"clear_{key}"):
+            settings.save_secret(key, None)
+            settings.audit(actor, key, "cleared")
+        elif new:
+            settings.save_secret(key, new[:500])
+            settings.audit(actor, key, "changed")
     if formats_shown:
         settings.save_formats(fmt_over)
         labels.apply_overrides(fmt_over)
