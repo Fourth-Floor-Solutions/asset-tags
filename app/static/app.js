@@ -154,11 +154,11 @@ document.addEventListener("DOMContentLoaded", initFormatGuard);
 // Send labels straight to the label printer and report the result inline.
 function printDirect(codes, button, out, onPrinted) {
   var label = button.textContent;
-  var mode = document.getElementById(button.dataset.strip || "strip-mode");
-  var strip = mode && mode.value === "strip" ? "1" : "0";
+  var sel = document.getElementById(button.dataset.strip || "strip-mode");
+  var mode = sel && sel.value ? sel.value : "cut";
   button.disabled = true;
   button.textContent = "Printing…";
-  fetch("/print/send", { method: "POST", body: new URLSearchParams({ codes: codes, strip: strip }), credentials: "same-origin" })
+  fetch("/print/send", { method: "POST", body: new URLSearchParams({ codes: codes, mode: mode }), credentials: "same-origin" })
     .then(function (r) { return r.json(); })
     .then(function (d) {
       out.hidden = false;
@@ -211,7 +211,7 @@ function initPrintButtons() {
 }
 document.addEventListener("DOMContentLoaded", initPrintButtons);
 
-// Batch cutting: remember the last choice in this browser (default: one strip).
+// Batch cutting: remember the last choice in this browser (default: one pre-cut strip).
 function initStripMode() {
   var sel = document.getElementById("strip-mode");
   if (!sel) return;
@@ -219,14 +219,15 @@ function initStripMode() {
   var initial = sel.dataset.initial;
   try {
     var saved = localStorage.getItem("tagdesk-strip-mode");
-    if (initial === "cut" || initial === "strip") {
+    var MODES = ["precut", "strip", "cut"];
+    if (MODES.indexOf(initial) >= 0) {
       sel.value = initial;
       localStorage.setItem("tagdesk-strip-mode", initial);
-    } else if (saved === "cut" || saved === "strip") {
+    } else if (MODES.indexOf(saved) >= 0) {
       sel.value = saved;
     }
   } catch (e) {
-    if (initial === "cut" || initial === "strip") sel.value = initial;
+    if (["precut", "strip", "cut"].indexOf(initial) >= 0) sel.value = initial;
   }
   sel.addEventListener("change", function () {
     try { localStorage.setItem("tagdesk-strip-mode", sel.value); } catch (e) {}
