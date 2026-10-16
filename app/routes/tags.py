@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from .. import auth, codes, csvout, db, hudu, hudu_archive, labels, log
+from .. import auth, codes, csvout, db, hudu, hudu_archive, labels, log, printer
 from ..tagops import (
     LABEL_PROBLEMS,
     MAX_BATCH,
@@ -204,7 +204,7 @@ def batch(
     client_id: int = Form(...),
     format: str = Form("standard"),
     count: int = Form(...),
-    cut: str = Form("strip"),
+    cut: str = Form("precut"),
 ):
     user = auth.require_user(request)
     with db.connection() as conn:
@@ -214,7 +214,7 @@ def batch(
         if err:
             return page(request, "batch.html", status_code=400, clients=clients(conn), error=err)
         issued = db.issue_tags(conn, count, client_id, format, auth.label(user))
-    return go("/print?codes=" + ",".join(issued) + "&batch=1&cut=" + ("cut" if cut == "cut" else "strip"))
+    return go("/print?codes=" + ",".join(issued) + "&batch=1&cut=" + (cut if cut in printer.CUT_MODES else "precut"))
 
 
 @router.get("/tags/{code}", response_class=HTMLResponse)

@@ -271,13 +271,60 @@ def raster_lines(image, tape_mm: int, nudge: int = 0) -> list:
     return lines
 
 
-def build_job(images: list, tape_mm: int, nudge: int = 0, strip: bool = False) -> bytes:
-    """A complete print job, one page per label.
+MAX_PAGE_DOTS = round(950 / 25.4 * 360)  # keep each strip under the printer's 1000 mm page limit
 
-    Normally every label is fully cut, so each comes out separately. With
-    `strip`, the labels are half cut instead (through the label, not the
-    backing), so the batch comes out as one strip and each label peels off
-    on its own; the printer fully cuts once after the last label.
+
+def join_strip(images: list) -> list:
+    """Join labels end to end into strips, with a dashed cut line at each join.
+
+    Returns one image per strip (several only if the batch is over ~950 mm).
+    The labels' own blank edges sit either side of each line.
+    """
+    from PIL import Image, ImageDraw
+
+    strips: list = []
+    current: list = []
+    for img in images:
+        if current and sum(i.width for i in current) + img.width > MAX_PAGE_DOTS:
+            strips.append(current)
+            current = []
+        current.append(img)
+    if current:
+        strips.append(current)
+    out = []
+    for group in strips:
+        h = max(i.height for i in group)
+        strip = Image.new("1", (sum(i.width for i in group), h), 1)
+        x = 0
+        d = ImageDraw.Draw(strip)
+        for n, img in enumerate(group):
+            strip.paste(img, (x, 0))
+            if n:
+                for y in range(0, h, 12):  # 6 dots on, 6 off, 2 dots wide
+                    d.rectangle([x - 1, y, x, min(y + 5, h - 1)], fill=0)
+            x += img.width
+        out.append(strip)
+    return out
+
+
+CUT_MODES = {
+    "precut": "One strip, pre-cut",
+    "strip": "One strip, cut them yourself",
+    "cut": "Cut each label",
+}
+
+
+def build_job(images: list, tape_mm: int, nudge: int = 0, mode: str = "cut") -> bytes:
+    """A complete print job. `mode` is one of CUT_MODES:
+
+    - "cut": one page per label, each fully cut, so labels come out separately.
+    - "precut": one page per label, half cut between them (through the label,
+      not the backing): one strip, each label peels off on its own; the printer
+      fully cuts once after the last label.
+    - "strip": the labels joined into one long page with printed dashed cut
+      lines (see join_strip), to cut by hand; fully cut at the end.
+
+    A single label is always simply cut.
 
     Tested on the PT-P950NW (16 Oct 2026): half cut only works with auto
     cut OFF (ESC i M 00). With auto cut on, "cut every n labels" put a full
@@ -285,8 +332,10 @@ def build_job(images: list, tape_mm: int, nudge: int = 0, strip: bool = False) -
     worked example) full-cut every label. Chain printing stays off in both
     modes: it left the last label stuck in the printer.
     """
+    if mode == "strip" and len(images) > 1:
+        images = join_strip(images)
     out = bytearray(b"\x00" * 200 + b"\x1b@")  # invalidate, initialise
-    half = strip and len(images) > 1
+    half = mode == "precut" and len(images) > 1
     for n, image in enumerate(images):
         lines = raster_lines(image, tape_mm, nudge)
         page = 2 if n == len(images) - 1 else (0 if n == 0 else 1)  # single page counts as last

@@ -41,10 +41,7 @@
       <p class="muted">Print to the P-touch with the tape for {% for f in used_formats %}{{ formats[f].tape }}{{ ', ' if not loop.last }}{% endfor %}. Each label prints at its real size, one per page.{% if used_formats|length > 1 %} This job mixes tape sizes: print one format at a time, or swap cassettes between labels.{% endif %}</p>
     </div>
     <div class="actions">
-      {% if printer_on and items|length > 1 %}<select id="strip-mode" aria-label="How to cut a batch" class="strip-opt" data-initial="{{ cut_choice }}">
-    <option value="strip" selected>One strip, peel off each label</option>
-    <option value="cut">Cut each label</option>
-  </select>{% endif %}
+      {% if printer_on and items|length > 1 %}<select id="strip-mode" aria-label="How to cut a batch" class="strip-opt" data-initial="{{ cut_choice }}"><option value="precut" selected>One strip, pre-cut</option><option value="strip">One strip, cut them yourself</option><option value="cut">Cut each label</option></select>{% endif %}
       {% if printer_on %}<button class="primary" id="send-btn" type="button" {{ 'disabled' if not n_ready }}>Print on label printer</button>{% endif %}
       <button class="{{ 'quiet' if printer_on else 'primary' }}" id="print-btn" type="button" {{ 'disabled' if not items }}>{{ 'Print from browser' if printer_on else 'Print' }}</button>
       {% if items|length == 1 %}<a class="btn" href="/tags/{{ items[0].tag.code }}">Back to tag</a>{% else %}<a class="btn" href="/">Back to tags</a>{% endif %}
@@ -74,7 +71,7 @@ if (sendBtn) sendBtn.addEventListener("click", function () {
   var out = document.getElementById("send-result");
   sendBtn.disabled = true;
   sendBtn.textContent = "Printing…";
-  fetch("/print/send", { method: "POST", body: new URLSearchParams({ codes: "{{ code_list }}", strip: (document.getElementById("strip-mode") || {}).value === "strip" ? "1" : "0" }), credentials: "same-origin" })
+  fetch("/print/send", { method: "POST", body: new URLSearchParams({ codes: "{{ code_list }}", mode: (document.getElementById("strip-mode") || {}).value || "cut" }), credentials: "same-origin" })
     .then(function (r) { return r.json(); })
     .then(function (d) {
       out.hidden = false;

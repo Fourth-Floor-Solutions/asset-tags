@@ -74,8 +74,11 @@ command set. The printer must be reachable from the server.
   position.
 - **Cutting:** each label is its own page. Normally every page is fully
   cut. Chain printing is always off, because it left the last label stuck
-  in the printer. A batch printed "as one strip" uses half cuts: each label is cut through but the backing
-  isn't, so the strip stays in one piece and labels peel off one by one,
+  in the printer. A batch can also come out as one strip, two ways.
+  **One strip, cut them yourself** joins the labels into one long page
+  (`join_strip`) with dashed lines between them, under the printer's 1 m
+  page limit. **One strip, pre-cut** uses half cuts: each label is cut
+  through but the backing isn't, so the strip stays in one piece and labels peel off one by one,
   with a full cut after the last. On the PT-P950NW this only works with
   auto cut turned off for the job; with auto cut on, its "cut every n"
   setting full-cut in the wrong places.

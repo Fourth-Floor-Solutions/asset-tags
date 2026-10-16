@@ -286,15 +286,60 @@ def test_strip_job():
     from app import labels, printer
 
     imgs = [labels.raster("slim", c, "X", "https://a.example") for c in ("AAAAA", "BBBBB", "CCCCC")]
-    # One strip: a page per label, half cut (bit 2) with no chain (bit 3), auto cut off.
-    job = printer.build_job(imgs, 12, strip=True)
+    # One strip, pre-cut: a page per label, half cut (bit 2) with no chain (bit 3), auto cut off.
+    job = printer.build_job(imgs, 12, mode="precut")
     assert job.count(b"\x1bia\x01") == 3 and job.count(b"\x1biK\x0c") == 3 and job.count(b"\x1biM\x00") == 3
     assert b"\x1biM\x40" not in job and job.endswith(b"\x1a")
     # Separate labels: auto cut on, full cut after every label, no half cut.
     single = printer.build_job(imgs, 12)
     assert single.count(b"\x1biM\x40") == 3 and single.count(b"\x1biK\x08") == 3 and b"\x1biK\x0c" not in single
     # A "strip" of one label is just a normal cut label.
-    assert b"\x1biK\x08" in printer.build_job(imgs[:1], 12, strip=True)
+    assert b"\x1biK\x08" in printer.build_job(imgs[:1], 12, mode="precut")
+    # One strip, cut them yourself: one long page with dashed lines, one full cut.
+    strips = printer.join_strip(imgs)
+    assert len(strips) == 1 and strips[0].width == sum(i.width for i in imgs)
+    for x in (imgs[0].width, imgs[0].width * 2):
+        assert any(strips[0].getpixel((x, y)) == 0 for y in range(strips[0].height))
+    joined = printer.build_job(imgs, 12, mode="strip")
+    assert joined.count(b"\x1bia\x01") == 1 and joined.count(b"\x1biK\x08") == 1
+    many = printer.join_strip([labels.raster("standard", "AAAAA", "X", "https://a.example")] * 30)
+    assert len(many) == 2 and all(s.width <= printer.MAX_PAGE_DOTS for s in many)
+
+
+def test_print_send_passes_cut_mode(monkeypatch, conn):
+    from fastapi.testclient import TestClient
+
+    from app import db, printer
+    from app.main import app
+    from app.routes import printing
+
+    conn.execute("INSERT INTO clients(name, label_name, active, updated_at) VALUES('Acme', 'Acme', 1, '')")
+    cid = conn.execute("SELECT MAX(id) FROM clients").fetchone()[0]
+    codes = db.issue_tags(conn, 2, cid, "standard", "admin")
+    p = {"id": 1, "name": "P", "host": "192.0.2.1", "nudge_dots": 0}
+    st = {"tape_mm": 18, "tape_colour": "yellow", "laminated": True, "errors": [], "busy": False}
+    monkeypatch.setattr(printing, "printers_live", lambda: [{"p": p, "st": st, "err": None}])
+    monkeypatch.setattr(printer, "route", lambda tags, ps: ({1: list(tags)}, []))
+    seen = []
+    monkeypatch.setattr(printer, "build_job", lambda images, tape, nudge, mode="cut": seen.append(mode) or b"")
+    monkeypatch.setattr(printer, "send", lambda host, job: None)
+    monkeypatch.setattr(printer, "wait_done", lambda host: None)
+    monkeypatch.setattr(printing.usage, "track", lambda *a: None)
+    monkeypatch.setattr(printing.usage, "summary", lambda *a: None)
+    web = TestClient(app)
+    login(web)
+    for sent, expected in (
+        ({"mode": "precut"}, "precut"),
+        ({"mode": "strip"}, "strip"),
+        ({"strip": "1"}, "strip"),
+        ({}, "cut"),
+    ):
+        r = web.post("/print/send", data={"codes": ",".join(codes), **sent})
+        assert r.status_code == 200, r.text
+        assert seen[-1] == expected
+    assert (
+        "pre-cut strip" in web.post("/print/send", data={"codes": ",".join(codes), "mode": "precut"}).json()["message"]
+    )
 
 
 def test_wait_done_ignores_errors_that_clear(monkeypatch):
@@ -492,7 +537,15 @@ def test_batch_cut_choice_carries_to_print_page(monkeypatch):
     assert r.headers["location"].endswith("&cut=cut")
     assert 'data-initial="cut"' in c.get(r.headers["location"]).text
     r = c.post("/tags/batch", data={"client_id": cid, "format": "standard", "count": "2"}, follow_redirects=False)
+    assert r.headers["location"].endswith("&cut=precut")  # the default: one pre-cut strip
+    r = c.post(
+        "/tags/batch",
+        data={"client_id": cid, "format": "standard", "count": "2", "cut": "strip"},
+        follow_redirects=False,
+    )
     assert r.headers["location"].endswith("&cut=strip")
+    page = c.get(r.headers["location"]).text
+    assert 'data-initial="strip"' in page and "One strip, pre-cut" in page and "One strip, cut them yourself" in page
 
 
 def test_login_page_tag_streams_and_no_version():

@@ -4,7 +4,7 @@ What changed in TagDesk, newest first. Everything that changed on the same
 day is listed under that one date, with any versions released that day in
 the heading. Versions follow [semantic versioning](https://semver.org).
 
-## 16 October 2026 · v0.2.0, v0.3.0, v0.4.0, v0.5.0, v0.6.0, v0.7.0, v0.8.0, v0.9.0, v0.10.0, v0.11.0, v0.12.0
+## 16 October 2026 · v0.2.0, v0.3.0, v0.4.0, v0.5.0, v0.6.0, v0.7.0, v0.8.0, v0.9.0, v0.10.0, v0.11.0, v0.12.0, v0.13.0
 
 ### Added
 - **Stocktake**: scan the tags at a site one after another to record each as seen (date, who, site), then **Finish stocktake** lists the client's tags in use that weren't scanned. Opening a tag's QR link while signed in also counts as seen. **Not seen recently** lists tags nobody has scanned for 3 to 24 months, and each tag's page shows when it was last seen ([#39](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/39)).
@@ -19,7 +19,7 @@ the heading. Versions follow [semantic versioning](https://semver.org).
 - **Coverage**: how many of each client's devices in Hudu have a tag, which ones still need one, and which tags aren't linked to a device. **Tag this device** opens Tag a device with the Hudu asset already filled in, the untagged list can be exported as CSV for an engineer to take to site, and admins choose which Hudu asset types count. Fetched from Hudu on **Refresh**; nothing is written to Hudu ([#33](https://github.com/Fourth-Floor-Solutions/tagdesk/issues/33)).
 
 ### Changed
-- **One strip** now comes out with each label half-cut: cut through the label but not the backing, so the strip stays in one piece and each label peels off on its own. It replaces the printed dashed cut lines. Tested on the PT-P950NW.
+- Batches can print as **One strip, pre-cut**: each label is half-cut (through the label but not the backing), so the strip stays in one piece and each label peels off on its own. It's the new default, alongside **One strip, cut them yourself** (printed cut lines) and **Cut each label**, on Print a batch, the print page, the Tags list's Print selected and the Reprint list. Tested on the PT-P950NW.
 - Every Hudu feature is only shown and available while Hudu is set up (address and API key): the Coverage page, the asset picker, client sync, writing tag codes, the archive check, **Open in Hudu** and the Hudu column on the Clients page.
 
 ### Fixed

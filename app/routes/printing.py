@@ -48,7 +48,7 @@ def print_sheet(request: Request, batch: str = "", cut: str = ""):
         items=items,
         used_formats=used,
         batch=batch == "1",
-        cut_choice=cut if cut in ("cut", "strip") else "",
+        cut_choice=cut if cut in printer.CUT_MODES else "",
         pstats=pstats,
         target=target,
         n_ready=len(target),
@@ -73,9 +73,13 @@ def _plural(n: int, word: str = "label") -> str:
 
 
 @router.post("/print/send")
-def print_send(request: Request, codes_csv: str = Form(..., alias="codes"), strip: str = Form("0")):
+def print_send(
+    request: Request, codes_csv: str = Form(..., alias="codes"), mode: str = Form(""), strip: str = Form("0")
+):
     """Print straight to the label printers, routing each label to one whose tape fits."""
     user = auth.require_user(request)
+    if mode not in printer.CUT_MODES:
+        mode = "strip" if strip == "1" else "cut"  # older pages sent strip=1/0
     pstats = printers_live()
     if not pstats:
         return JSONResponse(
@@ -99,7 +103,7 @@ def print_send(request: Request, codes_csv: str = Form(..., alias="codes"), stri
                 for t in batch
             ]
             try:
-                printer.send(p["host"], printer.build_job(images, st["tape_mm"], p["nudge_dots"], strip=strip == "1"))
+                printer.send(p["host"], printer.build_job(images, st["tape_mm"], p["nudge_dots"], mode=mode))
             except printer.PrinterError as e:
                 _log.warning("print job to %s (%s) failed: %s", p["name"], p["host"], e)
                 problems.append(f"{p['name']}: {e}")
@@ -117,7 +121,11 @@ def print_send(request: Request, codes_csv: str = Form(..., alias="codes"), stri
             printed += batch
             notes.append(
                 f"{_plural(len(batch))} on {p['name']} ({st['tape_mm']} mm {st['tape_colour']})"
-                + (" as one strip, half-cut to peel off" if strip == "1" and len(batch) > 1 else "")
+                + (
+                    {"precut": " as one pre-cut strip", "strip": " as one strip with cut lines"}.get(mode, "")
+                    if len(batch) > 1
+                    else ""
+                )
             )
     if printed:
         msg = "Printed " + "; ".join(notes) + "."

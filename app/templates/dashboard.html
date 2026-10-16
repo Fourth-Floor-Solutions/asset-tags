@@ -29,10 +29,7 @@
 {% if tags %}
 <div class="select-bar" id="select-bar" hidden>
   <span id="pick-count"></span>
-  {% if printer_on %}<select id="strip-mode" aria-label="How to cut a batch" class="strip-opt">
-    <option value="strip" selected>One strip, peel off each label</option>
-    <option value="cut">Cut each label</option>
-  </select>
+  {% if printer_on %}<select id="strip-mode" aria-label="How to cut a batch" class="strip-opt"><option value="precut" selected>One strip, pre-cut</option><option value="strip">One strip, cut them yourself</option><option value="cut">Cut each label</option></select>
   <button class="primary" type="button" id="print-selected">Print selected</button>{% endif %}
   <a class="btn quiet" id="preview-selected" href="/print">Open print page</a>
 </div>
