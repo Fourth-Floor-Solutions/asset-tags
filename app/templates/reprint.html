@@ -7,7 +7,7 @@
     <p class="muted">Tags that need a new label: reported damaged, missing or faded, or printed before their client, label name or format changed. Printing a tag takes it off the list.</p></div>
   {% if tags %}<div class="actions">
     {% if printer_on %}
-    <select id="strip-mode" class="strip-opt" aria-label="How to cut the labels"><option value="strip">One strip, cut them yourself</option><option value="cut">Cut each label</option></select>
+    <select id="strip-mode" class="strip-opt" aria-label="How to cut the labels"><option value="strip">One strip, peel off each label</option><option value="cut">Cut each label</option></select>
     <button class="primary" type="button" data-print-direct="{{ code_list }}" data-out="print-result" data-reload="1">Print all ({{ tags|length }})</button>
     {% endif %}
     <a class="btn {{ 'quiet' if printer_on else 'primary' }}" href="/print?codes={{ code_list }}&amp;batch=1">Print page</a>

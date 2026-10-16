@@ -15,7 +15,8 @@ works just as well for a single organisation tagging its own equipment.
 - **Prints straight to a Brother label printer** on your network (the
   PT-P950NW or PT-P900W). The app checks the loaded cassette is the
   right width and colour first, then prints each label cut separately or a
-  whole batch as one strip with cut lines.
+  whole batch as one strip, with each label half-cut so it peels off the
+  backing on its own.
 - **Tape tracking:** shows roughly how much tape is left in each cassette.
 - **Public scan page:** anyone who scans a tag sees the owner, the device name
   and your support contact. Staff who are signed in go straight to the record.

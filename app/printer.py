@@ -271,53 +271,22 @@ def raster_lines(image, tape_mm: int, nudge: int = 0) -> list:
     return lines
 
 
-MAX_PAGE_DOTS = round(950 / 25.4 * 360)  # keep each strip under the printer's 1000 mm page limit
-
-
-def join_strip(images: list) -> list:
-    """Join labels end to end into strips, with a dashed cut line at each join.
-
-    Returns one image per strip (several only if the batch is over ~950 mm).
-    The labels' own blank edges sit either side of each line.
-    """
-    from PIL import Image, ImageDraw
-
-    strips: list = []
-    current: list = []
-    for img in images:
-        if current and sum(i.width for i in current) + img.width > MAX_PAGE_DOTS:
-            strips.append(current)
-            current = []
-        current.append(img)
-    if current:
-        strips.append(current)
-    out = []
-    for group in strips:
-        h = max(i.height for i in group)
-        strip = Image.new("1", (sum(i.width for i in group), h), 1)
-        x = 0
-        d = ImageDraw.Draw(strip)
-        for n, img in enumerate(group):
-            strip.paste(img, (x, 0))
-            if n:
-                for y in range(0, h, 12):  # 6 dots on, 6 off, 2 dots wide
-                    d.rectangle([x - 1, y, x, min(y + 5, h - 1)], fill=0)
-            x += img.width
-        out.append(strip)
-    return out
-
-
 def build_job(images: list, tape_mm: int, nudge: int = 0, strip: bool = False) -> bytes:
-    """A complete print job, fully cut after every page.
+    """A complete print job, one page per label.
 
-    Normally each label is its own page, so each comes out separately. With
-    `strip`, the labels are joined into one long page per strip (see
-    join_strip), so the batch comes out in one piece to cut by hand.
-    Every job feeds out and cuts after the last page.
+    Normally every label is fully cut, so each comes out separately. With
+    `strip`, the labels are half cut instead (through the label, not the
+    backing), so the batch comes out as one strip and each label peels off
+    on its own; the printer fully cuts once after the last label.
+
+    Tested on the PT-P950NW (16 Oct 2026): half cut only works with auto
+    cut OFF (ESC i M 00). With auto cut on, "cut every n labels" put a full
+    cut in the wrong place, and earlier attempts with cut-every-1 (Brother's
+    worked example) full-cut every label. Chain printing stays off in both
+    modes: it left the last label stuck in the printer.
     """
-    if strip and len(images) > 1:
-        images = join_strip(images)
     out = bytearray(b"\x00" * 200 + b"\x1b@")  # invalidate, initialise
+    half = strip and len(images) > 1
     for n, image in enumerate(images):
         lines = raster_lines(image, tape_mm, nudge)
         page = 2 if n == len(images) - 1 else (0 if n == 0 else 1)  # single page counts as last
@@ -325,12 +294,10 @@ def build_job(images: list, tape_mm: int, nudge: int = 0, strip: bool = False) -
         out += (
             b"\x1biz" + bytes([0x84, 0x00, tape_mm, 0x00]) + len(lines).to_bytes(4, "little") + bytes([page, 0x00])
         )  # print information
-        out += b"\x1biM\x40"  # auto cut
-        out += b"\x1biA\x01"  # cut after every page
-        # No chain printing (bit 3): chain printing left the last label stuck
-        # in the printer. Half cut (bit 2) is not used: on the PT-P950NW it
-        # still cut right through, so strips are built as one long page instead.
-        out += b"\x1biK\x08"
+        out += b"\x1biM\x00" if half else b"\x1biM\x40"  # auto cut off for half-cut strips, on otherwise
+        out += b"\x1biA\x01"  # cut every label (only applies with auto cut on)
+        # Advanced mode: bit 3 = no chain printing (always); bit 2 = half cut (strips).
+        out += b"\x1biK\x0c" if half else b"\x1biK\x08"
         out += b"\x1bid" + FEED_DOTS.to_bytes(2, "little")  # 1 mm margins
         out += b"M\x02"  # TIFF compression
         for line in lines:
@@ -371,7 +338,16 @@ def wait_done(host: str, timeout: float = 30.0) -> str | None:
             time.sleep(1)
             continue
         if st["errors"]:
-            return "The printer reports: " + ", ".join(st["errors"]) + "."
+            # Half-cut jobs make the PT-P950NW flag "Communication error" briefly and
+            # print fine; only report errors that are still there a moment later.
+            time.sleep(2)
+            try:
+                again = status(host)
+            except PrinterError:
+                again = st
+            if again["errors"]:
+                return "The printer reports: " + ", ".join(again["errors"]) + "."
+            st = again
         if not st["busy"]:
             return None
         time.sleep(1)

@@ -72,11 +72,13 @@ command set. The printer must be reachable from the server.
   raster reference's tape table); counting from the left margin printed
   about 1 mm low. A per-printer **nudge** (in dots) fine-tunes the vertical
   position.
-- **Cutting:** every job is fully cut after each page. Chain printing is
-  off, because it left the last label stuck in the printer. Half cut isn't
-  used, because the PT-P950NW still cut right through. A batch printed "as
-  one strip" is instead joined into one long page (`join_strip`) with
-  dashed cut lines between labels, to cut by hand.
+- **Cutting:** each label is its own page. Normally every page is fully
+  cut. Chain printing is always off, because it left the last label stuck
+  in the printer. A batch printed "as one strip" uses half cuts: each label is cut through but the backing
+  isn't, so the strip stays in one piece and labels peel off one by one,
+  with a full cut after the last. On the PT-P950NW this only works with
+  auto cut turned off for the job; with auto cut on, its "cut every n"
+  setting full-cut in the wrong places.
 - **Routing:** with several printers, each label goes to the first printer
   (default first) that has the right tape loaded. Labels no printer can
   take are reported back as waiting.

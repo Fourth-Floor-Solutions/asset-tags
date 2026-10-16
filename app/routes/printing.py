@@ -117,7 +117,7 @@ def print_send(request: Request, codes_csv: str = Form(..., alias="codes"), stri
             printed += batch
             notes.append(
                 f"{_plural(len(batch))} on {p['name']} ({st['tape_mm']} mm {st['tape_colour']})"
-                + (" as one strip with cut lines" if strip == "1" and len(batch) > 1 else "")
+                + (" as one strip, half-cut to peel off" if strip == "1" and len(batch) > 1 else "")
             )
     if printed:
         msg = "Printed " + "; ".join(notes) + "."

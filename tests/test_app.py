@@ -286,18 +286,32 @@ def test_strip_job():
     from app import labels, printer
 
     imgs = [labels.raster("slim", c, "X", "https://a.example") for c in ("AAAAA", "BBBBB", "CCCCC")]
-    strips = printer.join_strip(imgs)
-    assert len(strips) == 1 and strips[0].width == sum(i.width for i in imgs)
-    # dashed cut line at each join
-    for x in (imgs[0].width, imgs[0].width * 2):
-        assert any(strips[0].getpixel((x, y)) == 0 for y in range(strips[0].height))
+    # One strip: a page per label, half cut (bit 2) with no chain (bit 3), auto cut off.
     job = printer.build_job(imgs, 12, strip=True)
-    assert job.count(b"\x1bia\x01") == 1 and job.count(b"\x1biK\x08") == 1  # one page, one cut
+    assert job.count(b"\x1bia\x01") == 3 and job.count(b"\x1biK\x0c") == 3 and job.count(b"\x1biM\x00") == 3
+    assert b"\x1biM\x40" not in job and job.endswith(b"\x1a")
+    # Separate labels: auto cut on, full cut after every label, no half cut.
     single = printer.build_job(imgs, 12)
-    assert single.count(b"\x1bia\x01") == 3  # three pages, three cuts
-    # very long batches split into several strips under 1 m
-    many = printer.join_strip([labels.raster("standard", "AAAAA", "X", "https://a.example")] * 30)
-    assert len(many) == 2 and all(s.width <= printer.MAX_PAGE_DOTS for s in many)
+    assert single.count(b"\x1biM\x40") == 3 and single.count(b"\x1biK\x08") == 3 and b"\x1biK\x0c" not in single
+    # A "strip" of one label is just a normal cut label.
+    assert b"\x1biK\x08" in printer.build_job(imgs[:1], 12, strip=True)
+
+
+def test_wait_done_ignores_errors_that_clear(monkeypatch):
+    from app import printer
+
+    replies = iter(
+        [
+            {"errors": ["Communication error"], "busy": False},
+            {"errors": [], "busy": False},
+            {"errors": ["Cover open"], "busy": False},
+            {"errors": ["Cover open"], "busy": False},
+        ]
+    )
+    monkeypatch.setattr(printer, "status", lambda host: next(replies))
+    monkeypatch.setattr(printer.time, "sleep", lambda s: None)
+    assert printer.wait_done("h") is None
+    assert printer.wait_done("h") == "The printer reports: Cover open."
 
 
 def test_cassette_usage(monkeypatch, conn):
